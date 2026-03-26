@@ -1,0 +1,182 @@
+"""
+FP8 Block-Scale GEMM Benchmark for MiniMax-M2.5 o_proj (RowParallelLinear)
+
+o_proj: Linear(num_heads * head_dim, hidden_size) = Linear(6144, 3072)
+TP=8 => weight [3072, 768], i.e. N=3072, K=768
+
+Quantization:
+  - Activation: per-1x128 (FP8 E4M3)
+  - Weight:     per-128x128 block-scale (FP8 E4M3)
+
+Benchmark batch_size from 4 to 256 (powers of 2).
+"""
+
+import torch
+import triton
+
+# ---- Constants ----
+N, K = 3072, 768  # o_proj TP=8
+GROUP_SIZE = 128
+BLOCK_SIZE = (128, 128)
+BATCH_SIZES = [4, 8, 16, 32, 64, 128, 256]
+WARMUP = 25
+REP = 100
+
+
+def quantize_activation_per_1x128(x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+    """Per-1x128 activation quantization using aiter."""
+    from aiter import QuantType, get_hip_quant
+    fp8_dtype = torch.float8_e4m3fn
+    quant_fn = get_hip_quant(QuantType.per_1x128)
+    return quant_fn(x.contiguous(), quant_dtype=fp8_dtype)
+
+
+def quantize_weight_per_128x128(w: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+    """Per-128x128 block-scale weight quantization.
+
+    w: [N, K] in BF16
+    Returns: (w_fp8 [N, K], w_scale [N/128, K/128] in float32)
+    """
+    fp8_dtype = torch.float8_e4m3fn
+    fp8_max = torch.finfo(fp8_dtype).max
+
+    n, k = w.shape
+    bn, bk = BLOCK_SIZE
+    assert n % bn == 0 and k % bk == 0
+
+    # Reshape into blocks
+    w_blocks = w.reshape(n // bn, bn, k // bk, bk)  # [n/128, 128, k/128, 128]
+    w_blocks = w_blocks.permute(0, 2, 1, 3)          # [n/128, k/128, 128, 128]
+
+    # Compute per-block scale
+    amax = w_blocks.abs().amax(dim=(-2, -1))  # [n/128, k/128]
+    scale = amax / fp8_max
+    scale = scale.clamp(min=1e-12)
+
+    # Quantize
+    w_scaled = w_blocks / scale[:, :, None, None]
+    w_fp8_blocks = w_scaled.clamp(-fp8_max, fp8_max).to(fp8_dtype)
+
+    # Reshape back to [N, K]
+    w_fp8 = w_fp8_blocks.permute(0, 2, 1, 3).reshape(n, k)
+
+    # scale_inv = 1/scale for dequant (match vllm convention)
+    scale_inv = (1.0 / scale).to(torch.float32)
+
+    return w_fp8, scale_inv
+
+
+NUM_INPUTS = 100  # number of different inputs captured in CUDA graph
+
+
+def capture_graph(fn, num_inputs=NUM_INPUTS):
+    """Capture a CUDA graph that replays fn() over num_inputs different calls.
+    Returns a callable that replays the graph once (covering all num_inputs iterations).
+    """
+    # Warmup (outside graph capture, to trigger lazy init / JIT)
+    for _ in range(3):
+        fn()
+    torch.cuda.synchronize()
+
+    stream = torch.cuda.Stream()
+    with torch.cuda.stream(stream):
+        graph = torch.cuda.CUDAGraph()
+        with torch.cuda.graph(graph, stream=stream):
+            for _ in range(num_inputs):
+                fn()
+    torch.cuda.synchronize()
+    return graph
+
+
+def bench_graph(graph, num_inputs=NUM_INPUTS):
+    """Benchmark a captured CUDA graph, return per-iteration median time in us."""
+    def replay():
+        graph.replay()
+    t_total = triton.testing.do_bench(replay, warmup=WARMUP, rep=REP, return_mode="median")
+    return t_total / num_inputs * 1000  # ms -> us, per iteration
+
+
+def bench_fp8_gemm():
+    """Benchmark FP8 block-scale GEMM vs BF16 GEMM using CUDA graph replay."""
+    from aiter import gemm_a8w8_blockscale
+    from aiter.ops.triton.gemm.basic.gemm_a16w8_blockscale import gemm_a16w8_blockscale
+
+    device = "cuda"
+
+    # Pre-generate weight (static, quantized once)
+    weight_bf16 = torch.randn(N, K, dtype=torch.bfloat16, device=device)
+    w_fp8, w_scale = quantize_weight_per_128x128(weight_bf16)
+
+    print(f"o_proj TP=8: weight [{N}, {K}], CUDA graph replay x{NUM_INPUTS}")
+    print(f"{'batch':>6} | {'CK q+g(us)':>11} | {'CK gemm(us)':>12} | {'fused(us)':>10} | {'BF16(us)':>9} | {'fused/CK':>8}")
+    print("-" * 72)
+
+    for M in BATCH_SIZES:
+        # Pre-generate NUM_INPUTS different inputs
+        inputs_bf16 = [torch.randn(M, K, dtype=torch.bfloat16, device=device) for _ in range(NUM_INPUTS)]
+        # Pre-quantized inputs for CK gemm-only path
+        inputs_fp8 = []
+        for x in inputs_bf16:
+            a_q, a_s = quantize_activation_per_1x128(x)
+            inputs_fp8.append((a_q, a_s))
+
+        # Use a fixed input buffer that we copy into during graph capture
+        input_buf = torch.empty(M, K, dtype=torch.bfloat16, device=device)
+        a_fp8_buf = torch.empty(M, K, dtype=torch.float8_e4m3fn, device=device)
+        a_scale_buf = torch.empty(M, K // 128, dtype=torch.float32, device=device)
+
+        # --- CK path: quant + gemm (end-to-end) ---
+        idx = [0]
+        def fn_ck_e2e():
+            i = idx[0] % NUM_INPUTS
+            input_buf.copy_(inputs_bf16[i])
+            a_q, a_s = quantize_activation_per_1x128(input_buf)
+            gemm_a8w8_blockscale(a_q, w_fp8, a_s, w_scale, dtype=torch.bfloat16)
+            idx[0] += 1
+
+        g_ck_e2e = capture_graph(fn_ck_e2e)
+        t_ck_e2e = bench_graph(g_ck_e2e)
+
+        # --- CK path: gemm only (pre-quantized) ---
+        idx[0] = 0
+        def fn_ck_gemm():
+            i = idx[0] % NUM_INPUTS
+            a_fp8_buf.copy_(inputs_fp8[i][0])
+            a_scale_buf.copy_(inputs_fp8[i][1])
+            gemm_a8w8_blockscale(a_fp8_buf, w_fp8, a_scale_buf, w_scale, dtype=torch.bfloat16)
+            idx[0] += 1
+
+        g_ck_gemm = capture_graph(fn_ck_gemm)
+        t_ck_gemm = bench_graph(g_ck_gemm)
+
+        # --- Fused triton: a16w8 with PREQUANT ---
+        idx[0] = 0
+        def fn_fused():
+            i = idx[0] % NUM_INPUTS
+            input_buf.copy_(inputs_bf16[i])
+            gemm_a16w8_blockscale(input_buf, w_fp8, w_scale, dtype=torch.bfloat16, prequant=True)
+            idx[0] += 1
+
+        g_fused = capture_graph(fn_fused)
+        t_fused = bench_graph(g_fused)
+
+        # --- BF16 baseline ---
+        idx[0] = 0
+        def fn_bf16():
+            i = idx[0] % NUM_INPUTS
+            input_buf.copy_(inputs_bf16[i])
+            torch.mm(input_buf, weight_bf16.T)
+            idx[0] += 1
+
+        g_bf16 = capture_graph(fn_bf16)
+        t_bf16 = bench_graph(g_bf16)
+
+        ratio = t_ck_e2e / t_fused
+        print(f"{M:>6} | {t_ck_e2e:>11.1f} | {t_ck_gemm:>12.1f} | {t_fused:>10.1f} | {t_bf16:>9.1f} | {ratio:>7.2f}x")
+
+        # Free graphs
+        del g_ck_e2e, g_ck_gemm, g_fused, g_bf16
+
+
+if __name__ == "__main__":
+    bench_fp8_gemm()
