@@ -11,6 +11,9 @@ Quantization:
 Benchmark batch_size from 4 to 256 (powers of 2).
 """
 
+import os
+from contextlib import nullcontext
+
 import torch
 import triton
 
@@ -21,6 +24,30 @@ BLOCK_SIZE = (128, 128)
 BATCH_SIZES = [4, 8, 16, 32, 64, 128, 256]
 WARMUP = 25
 REP = 100
+
+# Set FP8_GEMM_PROFILE=1 to dump CUDA-only profiler trace for ck_e2e / ck_gemm bench replay (first batch only, GRAPH_CAP/).
+ENABLE_PROFILER = os.environ.get("FP8_GEMM_PROFILE", "") == "1"
+
+
+def _graph_bench_profiler(first_batch: bool, worker_tag: str):
+    """CUDA-only profiler around graph replay bench; only when ENABLE_PROFILER and first batch."""
+    if not first_batch or not ENABLE_PROFILER:
+        return nullcontext()
+    local_rank = int(os.environ.get("LOCAL_RANK", "0"))
+    os.makedirs("GRAPH_CAP", exist_ok=True)
+    trace_dir = "./GRAPH_CAP"
+    print(f"FP8 GEMM profiler: {worker_tag} bench replay -> {trace_dir}")
+    return torch.profiler.profile(
+        activities=[torch.profiler.ProfilerActivity.CUDA],
+        record_shapes=False,
+        profile_memory=False,
+        with_stack=False,
+        on_trace_ready=torch.profiler.tensorboard_trace_handler(
+            trace_dir,
+            worker_name=f"{worker_tag}_rank_{local_rank}",
+            use_gzip=True,
+        ),
+    )
 
 
 def quantize_activation_per_1x128(x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
@@ -111,7 +138,7 @@ def bench_fp8_gemm():
     print(f"{'batch':>6} | {'CK q+g(us)':>11} | {'CK gemm(us)':>12} | {'fused(us)':>10} | {'BF16(us)':>9} | {'fused/CK':>8}")
     print("-" * 72)
 
-    for M in BATCH_SIZES:
+    for i, M in enumerate(BATCH_SIZES):
         # Pre-generate NUM_INPUTS different inputs
         inputs_bf16 = [torch.randn(M, K, dtype=torch.bfloat16, device=device) for _ in range(NUM_INPUTS)]
         # Pre-quantized inputs for CK gemm-only path
@@ -135,7 +162,7 @@ def bench_fp8_gemm():
             idx[0] += 1
 
         g_ck_e2e = capture_graph(fn_ck_e2e)
-        t_ck_e2e = bench_graph(g_ck_e2e)
+        # with _graph_bench_profiler(i == 0, "ck_e2e"):
 
         # --- CK path: gemm only (pre-quantized) ---
         idx[0] = 0
@@ -147,7 +174,9 @@ def bench_fp8_gemm():
             idx[0] += 1
 
         g_ck_gemm = capture_graph(fn_ck_gemm)
-        t_ck_gemm = bench_graph(g_ck_gemm)
+        with _graph_bench_profiler(i == 0, "ck_gemm"):
+            t_ck_e2e = bench_graph(g_ck_e2e)
+            t_ck_gemm = bench_graph(g_ck_gemm)
 
         # --- Fused triton: a16w8 with PREQUANT ---
         idx[0] = 0
