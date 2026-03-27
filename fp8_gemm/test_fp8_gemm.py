@@ -19,6 +19,7 @@ import triton
 
 # ---- Constants ----
 N, K = 3072, 768  # o_proj TP=8
+N, K = 3072, 3072  # o_proj TP=8
 GROUP_SIZE = 128
 BLOCK_SIZE = (128, 128)
 BATCH_SIZES = [4, 8, 16, 32, 64, 128, 256]
@@ -28,6 +29,7 @@ REP = 100
 # Set FP8_GEMM_PROFILE=1 to dump CUDA-only profiler trace for ck_e2e / ck_gemm bench replay (first batch only, GRAPH_CAP/).
 ENABLE_PROFILER = os.environ.get("FP8_GEMM_PROFILE", "") == "1"
 
+assert os.environ["HIP_FORCE_DEV_KERNARG"] == "1"
 
 def _graph_bench_profiler(first_batch: bool, worker_tag: str):
     """CUDA-only profiler around graph replay bench; only when ENABLE_PROFILER and first batch."""
@@ -130,9 +132,13 @@ def bench_fp8_gemm():
 
     device = "cuda"
 
-    # Pre-generate weight (static, quantized once)
-    weight_bf16 = torch.randn(N, K, dtype=torch.bfloat16, device=device)
-    w_fp8, w_scale = quantize_weight_per_128x128(weight_bf16)
+    # Pre-generate NUM_INPUTS different weights (avoid cache hits)
+    weights_bf16 = [torch.randn(N, K, dtype=torch.bfloat16, device=device) for _ in range(NUM_INPUTS)]
+    weights_fp8, weights_scale = [], []
+    for w in weights_bf16:
+        wq, ws = quantize_weight_per_128x128(w)
+        weights_fp8.append(wq)
+        weights_scale.append(ws)
 
     print(f"o_proj TP=8: weight [{N}, {K}], CUDA graph replay x{NUM_INPUTS}")
     print(f"{'batch':>6} | {'CK q+g(us)':>11} | {'CK gemm(us)':>12} | {'fused(us)':>10} | {'BF16(us)':>9} | {'fused/CK':>8}")
@@ -147,18 +153,12 @@ def bench_fp8_gemm():
             a_q, a_s = quantize_activation_per_1x128(x)
             inputs_fp8.append((a_q, a_s))
 
-        # Use a fixed input buffer that we copy into during graph capture
-        input_buf = torch.empty(M, K, dtype=torch.bfloat16, device=device)
-        a_fp8_buf = torch.empty(M, K, dtype=torch.float8_e4m3fn, device=device)
-        a_scale_buf = torch.empty(M, K // 128, dtype=torch.float32, device=device)
-
         # --- CK path: quant + gemm (end-to-end) ---
         idx = [0]
         def fn_ck_e2e():
             i = idx[0] % NUM_INPUTS
-            input_buf.copy_(inputs_bf16[i])
-            a_q, a_s = quantize_activation_per_1x128(input_buf)
-            gemm_a8w8_blockscale(a_q, w_fp8, a_s, w_scale, dtype=torch.bfloat16)
+            a_q, a_s = quantize_activation_per_1x128(inputs_bf16[i])
+            gemm_a8w8_blockscale(a_q, weights_fp8[i], a_s, weights_scale[i], dtype=torch.bfloat16)
             idx[0] += 1
 
         g_ck_e2e = capture_graph(fn_ck_e2e)
@@ -168,9 +168,7 @@ def bench_fp8_gemm():
         idx[0] = 0
         def fn_ck_gemm():
             i = idx[0] % NUM_INPUTS
-            a_fp8_buf.copy_(inputs_fp8[i][0])
-            a_scale_buf.copy_(inputs_fp8[i][1])
-            gemm_a8w8_blockscale(a_fp8_buf, w_fp8, a_scale_buf, w_scale, dtype=torch.bfloat16)
+            gemm_a8w8_blockscale(inputs_fp8[i][0], weights_fp8[i], inputs_fp8[i][1], weights_scale[i], dtype=torch.bfloat16)
             idx[0] += 1
 
         g_ck_gemm = capture_graph(fn_ck_gemm)
@@ -182,8 +180,7 @@ def bench_fp8_gemm():
         idx[0] = 0
         def fn_fused():
             i = idx[0] % NUM_INPUTS
-            input_buf.copy_(inputs_bf16[i])
-            gemm_a16w8_blockscale(input_buf, w_fp8, w_scale, dtype=torch.bfloat16, prequant=True)
+            gemm_a16w8_blockscale(inputs_bf16[i], weights_fp8[i], weights_scale[i], dtype=torch.bfloat16, prequant=True)
             idx[0] += 1
 
         g_fused = capture_graph(fn_fused)
@@ -193,8 +190,7 @@ def bench_fp8_gemm():
         idx[0] = 0
         def fn_bf16():
             i = idx[0] % NUM_INPUTS
-            input_buf.copy_(inputs_bf16[i])
-            torch.mm(input_buf, weight_bf16.T)
+            torch.mm(inputs_bf16[i], weights_bf16[i].T)
             idx[0] += 1
 
         g_bf16 = capture_graph(fn_bf16)
