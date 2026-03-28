@@ -262,37 +262,116 @@ DPP 快 3-4x 且不占用 LDS
 
 ---
 
-## Quant + MFMA Pipeline 时序估算
+## Roofline 分析 & 时序估算
+
+### 数据量
+
+```
+Weight B:  [3072, 3072] × 1B (FP8)  = 9 MB     ← 绝对大头，无 reuse
+A input:   [4, 3072]    × 2B (BF16) = 24 KB     ← L2 缓存，被 192 个 N-tile 复用
+A scale:   [4, 24]      × 4B (FP32) = 384 B
+B scale:   [24, 24]     × 4B (FP32) = 2.3 KB
+Output:    [4, 3072]    × 2B (BF16) = 24 KB
+
+Total HBM read  ≈ 9 MB   (B 每个元素跨所有 CTA 只读一次)
+Total HBM write ≈ 24 KB  (最终输出)
+```
+
+### Roofline
+
+```
+Compute:   2 × 4 × 3072 × 3072 = 75.5 MFLOP
+Memory:    ~9 MB
+
+Arithmetic Intensity = 75.5 MFLOP / 9 MB = 8.4 FLOP/byte
+                       ← 非常低，完全 memory bound!
+
+MI355X:
+  HBM peak:  8 TB/s
+  有效带宽:  ~5 TB/s (考虑其他指令消耗)
+  FP8 peak:  ~2.6 PFLOPS
+
+Memory time:  9 MB / 5 TB/s  = 1.8 us    ← 理论下界!
+Compute time: 75.5M / 2.6P   = 0.03 us   ← 可忽略
+
+结论: 瓶颈 100% 在 HBM 带宽, 不在计算
+      理论最优 ≈ 1.8 us (仅 weight 读取)
+```
+
+### 对比 Baseline
+
+```
+CK 端到端 (M=4, N=K=3072): ~8.5 us
+理论下界:                    ~1.8 us
+CK 达到的有效带宽:           9 MB / 8.5 us ≈ 1.06 TB/s (仅 peak 的 13%)
+
+差距来源:
+  - CK quant 是独立 kernel (~1 us)
+  - CK gemm kernel 本身 ~7.4 us
+  - M=4 太小，CTA 数量不够多，HBM 带宽利用率低
+  - CK 的 tile config 不是为这个 shape 优化的
+```
+
+### Per-CTA 视角
+
+```
+Per CTA (KSPLIT=8, BLOCK_N=16):
+  B tile load: [384, 16] FP8 = 6 KB       ← 每个 CTA 的 weight 部分
+  A tile load: [4, 384]  BF16 = 3 KB      ← 但 L2 hit (被同 K-split 的 192 个 CTA 共享)
+  Per CTA unique HBM read ≈ 6 KB (B)
+
+  Total CTAs: 192 × 8 = 1536
+  Total B across CTAs: 1536 × 6 KB = 9 MB ✓ (无重复，每个 CTA 读不同的 B 块)
+```
+
+### Per-CTA Pipeline 时序
 
 ```
 Quant (VALU pipeline):  ~80 cycles per tile
 MFMA (Matrix pipeline): ~32-64 cycles per instruction (16x16x128)
-
 VALU 和 Matrix 是不同 pipeline，可以重叠!
 
-Timeline (粗估):
+单 CTA load 6+3 = 9 KB, HBM latency ~200-400 cycles
+
+Timeline (per CTA, 粗估):
   Cycle 0:     issue load(A0, B0), load(A1, B1)
-  Cycle ~200:  A0,B0 ready (HBM latency ~200-400 cycles)
-  Cycle 200:   start quant A0 (VALU)
-  Cycle 280:   quant A0 done, issue load(A2, B2), start MFMA(A0, B0)
-  Cycle 280:   start quant A1 (VALU, overlaps with MFMA)    ← 重叠!
-  Cycle 344:   MFMA(A0) done
-  Cycle 360:   quant A1 done, start MFMA(A1, B1)
-  Cycle 360:   start quant A2 (VALU, overlaps)               ← 重叠!
-  Cycle 424:   MFMA(A1) done
-  Cycle 440:   quant A2 done, start MFMA(A2, B2)
-  Cycle 504:   MFMA(A2) done → acc ready
+  Cycle ~300:  A0,B0 ready (HBM latency)
+  Cycle 300:   quant A0 (VALU, ~80 cycles)
+  Cycle 380:   issue load(A2, B2), MFMA(A0, B0) (~64 cycles)
+  Cycle 380:   quant A1 (VALU, overlaps MFMA)     ← VALU + Matrix 并行
+  Cycle 444:   MFMA(A0) done
+  Cycle 460:   quant A1 done, MFMA(A1, B1)
+  Cycle 460:   quant A2 (overlaps MFMA)
+  Cycle 524:   MFMA(A1) done
+  Cycle 540:   MFMA(A2, B2)
+  Cycle 604:   MFMA(A2) done → acc ready
+  Cycle 650:   epilogue (scale + store)
+  Cycle 700+:  atomic + possible reduce
 
-  Compute phase: ~504 - 200 = ~300 cycles (不含首次 load latency)
-  At 2 GHz: ~150 ns = 0.15 us
+  单 CTA 执行时间 ≈ 700 cycles ≈ 0.35 us @ 2 GHz
 
-  + 首次 load latency: ~200-400 cycles → 0.1-0.2 us
-  + Epilogue (scale + store + atomic + possible reduce): ~0.1-0.2 us
-
-  预估单 CTA 总耗时: ~0.5-0.7 us
+但这不是瓶颈! 瓶颈是 1536 个 CTA 争抢 HBM 带宽:
+  1536 × 9 KB / 5 TB/s = 2.8 us
+  减去 A 的 L2 复用 (仅 24 KB 从 HBM):
+  (9 MB + 24 KB) / 5 TB/s ≈ 1.8 us
 ```
 
-**理论极限很低**，瓶颈将在同步和 reduce 阶段。
+### 理论耗时总结
+
+```
+                              时间 (us)
+HBM weight read (9 MB @ 5TB/s):  1.8     ← 不可避免的下界
+Compute (3 MFMA per CTA):        0.03    ← 可忽略
+Quant overhead:                   fused, hidden by memory
+Split-K reduce + atomic:          0.1-0.3 ← 取决于方案
+Kernel launch (graph):            ~0.5    ← CUDA graph 最低开销
+
+理论总耗时: ~2.3-2.6 us
+目标:       < 4 us (2x better than CK's 8.5 us)
+```
+
+**核心认知：这是一个纯 bandwidth-bound 问题。优化目标不是减少计算，而是最大化 HBM 带宽利用率。**
+关键是让 1536 个 CTA 产生足够的并发 memory 请求来饱和 5 TB/s 带宽。
 
 ---
 
