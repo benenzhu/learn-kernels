@@ -6,14 +6,32 @@
 |------|------|
 | Host launcher | `aiter_meta/csrc/py_itfs_cu/asm_mi350_a8w8_blockscale.cu` |
 | Header | `aiter_meta/csrc/include/asm_mi350_a8w8_blockscale.h` |
-| GPU code object (M≤32) | `aiter_meta/hsa/gfx950/f8_block_scale_mi350_x32.co` (18K, 1784 行 ISA) |
-| GPU code object (M>32) | `aiter_meta/hsa/gfx950/f8_block_scale_mi350_x128.co` (41K, 5495 行 ISA) |
-| 另有 x64, x96 变体 | `f8_block_scale_mi350_x64.co` (26K), `f8_block_scale_mi350_x96.co` (33K) |
+| GPU code object (x32) | `aiter_meta/hsa/gfx950/f8_block_scale_mi350_x32.co` (18K) |
+| GPU code object (x64) | `aiter_meta/hsa/gfx950/f8_block_scale_mi350_x64.co` (26K) |
+| GPU code object (x96) | `aiter_meta/hsa/gfx950/f8_block_scale_mi350_x96.co` (33K) |
+| GPU code object (x128) | `aiter_meta/hsa/gfx950/f8_block_scale_mi350_x128.co` (41K) |
 
-反汇编命令：
+`aiter_meta` 完整路径: `/usr/local/lib/python3.12/dist-packages/aiter_meta`
+
+### 反汇编
+
 ```bash
-/opt/rocm/llvm/bin/llvm-objdump -d f8_block_scale_mi350_x32.co > f8_block_scale_mi350_x32.isa
+# 反汇编全部 4 个 .co → 清理后的 .s（去掉行尾 hex encoding 注释）
+python disasm.py \
+  /usr/local/lib/python3.12/dist-packages/aiter_meta/hsa/gfx950/f8_block_scale_mi350_x32.co \
+  /usr/local/lib/python3.12/dist-packages/aiter_meta/hsa/gfx950/f8_block_scale_mi350_x64.co \
+  /usr/local/lib/python3.12/dist-packages/aiter_meta/hsa/gfx950/f8_block_scale_mi350_x96.co \
+  /usr/local/lib/python3.12/dist-packages/aiter_meta/hsa/gfx950/f8_block_scale_mi350_x128.co
 ```
+
+生成的 `.s` 文件：
+
+| 文件 | 行数 |
+|------|------|
+| `f8_block_scale_mi350_x32.s` | 1784 |
+| `f8_block_scale_mi350_x64.s` | 3021 |
+| `f8_block_scale_mi350_x96.s` | 4258 |
+| `f8_block_scale_mi350_x128.s` | 5495 |
 
 ## Python 调用入口
 
