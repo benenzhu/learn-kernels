@@ -5,8 +5,8 @@
 | 项目 | 规格 |
 |------|------|
 | GPU | 8x AMD Instinct MI325X (gfx950, 295GB HBM3e) |
-| 互联 | XGMI 全连接 (weight=15), 每条 link 50 GB/s 单向 |
-| 聚合带宽 | 7 links × 50 GB/s = 350 GB/s 单向 per GPU |
+| 互联 | XGMI 全连接 (weight=15), 每条 link ~52 GB/s 单向 |
+| 聚合带宽 | 7 links × ~52 GB/s ≈ 366 GB/s 单向 per GPU |
 | CPU | AMD EPYC 9575F 64-Core |
 | TP | 8 |
 
@@ -49,26 +49,26 @@ Bus bandwidth 计算公式: `busbw = data_size × 2 × (N-1)/N / latency`, N=8
 | AR call | Shape | dtype | Size | nccl (us) | aiter (us) | vllm (us) | nccl BW | aiter BW | vllm BW |
 |---------|-------|-------|------|-----------|------------|-----------|---------|----------|---------|
 | AR#1 QK_var | (4, 2) | f32 | 32 B | 51.4 | 27.4 | 21.8 | 0.0 GB/s | 0.0 GB/s | 0.0 GB/s |
-| AR#2 o_proj | (4, 3072) | bf16 | 24 KB | 36.1 | 19.3 | 12.5 | 1.1 GB/s | 2.2 GB/s | 3.4 GB/s |
-| AR#3 MoE | (4, 3072) | bf16 | 24 KB | 36.0 | 15.2 | 12.6 | 1.2 GB/s | 2.8 GB/s | 3.3 GB/s |
+| AR#2 o_proj | (4, 3072) | bf16 | 24 KiB | 36.1 | 19.3 | 12.5 | 1.2 GB/s | 2.2 GB/s | 3.4 GB/s |
+| AR#3 MoE | (4, 3072) | bf16 | 24 KiB | 36.0 | 15.2 | 12.6 | 1.2 GB/s | 2.8 GB/s | 3.4 GB/s |
 | **LAYER TOTAL** | | | | **123.4** | **61.9** | **46.9** | | | |
 
 ### conc256 (decode, 256 tokens)
 
 | AR call | Shape | dtype | Size | nccl (us) | aiter (us) | vllm (us) | nccl BW | aiter BW | vllm BW |
 |---------|-------|-------|------|-----------|------------|-----------|---------|----------|---------|
-| AR#1 QK_var | (256, 2) | f32 | 2 KB | 30.7 | 14.8 | 12.3 | 0.1 GB/s | 0.2 GB/s | 0.3 GB/s |
-| AR#2 o_proj | (256, 3072) | bf16 | 1.5 MB | 44.7 | 20.4 | 30.3 | 58.7 GB/s | 128.6 GB/s | 86.6 GB/s |
-| AR#3 MoE | (256, 3072) | bf16 | 1.5 MB | 44.5 | 20.4 | 30.2 | 58.9 GB/s | 128.6 GB/s | 86.8 GB/s |
+| AR#1 QK_var | (256, 2) | f32 | 2 KiB | 30.7 | 14.8 | 12.3 | 0.1 GB/s | 0.2 GB/s | 0.3 GB/s |
+| AR#2 o_proj | (256, 3072) | bf16 | 1.5 MiB | 44.7 | 20.4 | 30.3 | 61.6 GB/s | 134.9 GB/s | 90.8 GB/s |
+| AR#3 MoE | (256, 3072) | bf16 | 1.5 MiB | 44.5 | 20.4 | 30.2 | 61.9 GB/s | 134.9 GB/s | 91.1 GB/s |
 | **LAYER TOTAL** | | | | **119.9** | **55.6** | **72.8** | | | |
 
 ### conc16384 (decode, 16384 tokens)
 
 | AR call | Shape | dtype | Size | nccl (us) | aiter (us) | vllm (us) | nccl BW | aiter BW | vllm BW |
 |---------|-------|-------|------|-----------|------------|-----------|---------|----------|---------|
-| AR#1 QK_var | (16384, 2) | f32 | 128 KB | 31.6 | 15.0 | 14.7 | 7.1 GB/s | 14.9 GB/s | 15.2 GB/s |
-| AR#2 o_proj | (16384, 3072) | bf16 | 96 MB | 555.2 | 480.9 | 761.6 | 302.3 GB/s | 349.1 GB/s | 220.5 GB/s |
-| AR#3 MoE | (16384, 3072) | bf16 | 96 MB | 554.8 | 480.8 | 761.3 | 302.5 GB/s | 349.2 GB/s | 220.6 GB/s |
+| AR#1 QK_var | (16384, 2) | f32 | 128 KiB | 31.6 | 15.0 | 14.7 | 7.3 GB/s | 15.3 GB/s | 15.6 GB/s |
+| AR#2 o_proj | (16384, 3072) | bf16 | 96 MiB | 555.2 | 480.9 | 761.6 | 317.3 GB/s | 366.3 GB/s | 231.3 GB/s |
+| AR#3 MoE | (16384, 3072) | bf16 | 96 MiB | 554.8 | 480.8 | 761.3 | 317.5 GB/s | 366.4 GB/s | 231.4 GB/s |
 | **LAYER TOTAL** | | | | **1141.6** | **976.8** | **1537.5** | | | |
 
 ## 总结: 每层 All-Reduce 耗时
@@ -90,13 +90,13 @@ Bus bandwidth 计算公式: `busbw = data_size × 2 × (N-1)/N / latency`, N=8
 
 2. **Transition zone (conc256, ~1.5MB)**
    - aiter 最快 (56 us/层), 比 NCCL 快 2.2x
-   - 128.6 GB/s busbw, 已开始利用 XGMI 带宽但远未饱和
+   - 134.9 GB/s busbw, 已开始利用 XGMI 带宽但远未饱和
    - vllm 此区间不如 aiter (73 us vs 56 us)
 
 3. **Bandwidth-bound (conc16384, 96MB)**
-   - aiter 最快 (977 us/层), 349 GB/s busbw, 接近 XGMI 峰值 350 GB/s (**99.7% 利用率**)
-   - NCCL 居中 (1142 us/层), 302 GB/s, 86% 利用率
-   - vllm 最慢 (1538 us/层), 221 GB/s, 仅 63% — 2-stage 同步开销或 kernel 效率问题
+   - aiter 最快 (977 us/层), 366 GB/s busbw, 达到 XGMI 峰值 (**~100% 利用率**)
+   - NCCL 居中 (1142 us/层), 317 GB/s, 87% 利用率
+   - vllm 最慢 (1538 us/层), 231 GB/s, 仅 63% — 2-stage 同步开销或 kernel 效率问题
 
 ### 瓶颈定位
 
