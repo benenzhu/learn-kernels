@@ -4,9 +4,10 @@
 
 | 项目 | 规格 |
 |------|------|
-| GPU | 8x AMD Instinct MI325X (gfx950, 295GB HBM3e) |
-| 互联 | XGMI 全连接 (weight=15), 每条 link ~52 GB/s 单向 |
-| 聚合带宽 | 7 links × ~52 GB/s ≈ 366 GB/s 单向 per GPU |
+| GPU | 8x AMD Instinct MI355X OAM (CDNA 4, gfx950, 256 CU, 288GB HBM3e) |
+| 互联 | XGMI 全连接 (weight=15), 7x Infinity Fabric links |
+| 每条 link | 153.6 GB/s 双向 (76.8 GB/s 单向) |
+| 单 GPU 聚合 | 7 × 76.8 = 537.6 GB/s 单向 |
 | CPU | AMD EPYC 9575F 64-Core |
 | TP | 8 |
 
@@ -94,9 +95,10 @@ Bus bandwidth 计算公式: `busbw = data_size × 2 × (N-1)/N / latency`, N=8
    - vllm 此区间不如 aiter (73 us vs 56 us)
 
 3. **Bandwidth-bound (conc16384, 96MB)**
-   - aiter 最快 (977 us/层), 366 GB/s busbw, 达到 XGMI 峰值 (**~100% 利用率**)
-   - NCCL 居中 (1142 us/层), 317 GB/s, 87% 利用率
-   - vllm 最慢 (1538 us/层), 231 GB/s, 仅 63% — 2-stage 同步开销或 kernel 效率问题
+   - aiter 最快 (977 us/层), 366 GB/s busbw, 68% Infinity Fabric 利用率 (峰值 537.6 GB/s)
+   - NCCL 居中 (1142 us/层), 317 GB/s, 59% 利用率
+   - vllm 最慢 (1538 us/层), 231 GB/s, 43% 利用率
+   - 均有较大优化空间, MI355X 的 Infinity Fabric 带宽远未跑满
 
 ### 瓶颈定位
 
