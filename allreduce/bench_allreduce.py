@@ -177,6 +177,24 @@ def main():
         print(header)
         print("-" * len(header))
 
+    # Global warmup: run every backend × shape combination to eliminate
+    # first-call JIT/plan overhead before any measurement
+    if rank == 0:
+        print("Global warmup (all backends × all shapes)...")
+    for _, num_tokens in scenarios:
+        for _, shape_fn, dtype in ar_configs:
+            shape = shape_fn(num_tokens)
+            tensor = torch.randn(shape, dtype=dtype, device=device)
+            for name, make_fn, comm in backends:
+                skip = comm is not None and hasattr(comm, 'should_custom_ar') and not comm.should_custom_ar(tensor)
+                if not skip:
+                    fn = make_fn(tensor)
+                    for _ in range(20):
+                        fn()
+    torch.cuda.synchronize()
+    if rank == 0:
+        print("Global warmup done.\n")
+
     # Run benchmarks
     for scen_name, num_tokens in scenarios:
         totals_eager = {name: 0.0 for name, _, _ in backends}
