@@ -8,6 +8,7 @@ Usage:
     # same API as vllm's CustomAllreduce
 """
 
+import glob
 import os
 import torch
 import torch.distributed as dist
@@ -16,10 +17,11 @@ from torch.distributed import ProcessGroup
 from torch.utils.cpp_extension import load
 
 # ---------------------------------------------------------------------------
-# JIT compile the C++ extension
+# JIT compile with auto-reload on source change
 # ---------------------------------------------------------------------------
 
 _CSRC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "csrc")
+_BUILD_DIR = os.path.join(_CSRC_DIR, "build")
 
 _extra_cflags = ["-O3"]
 _extra_cuda_cflags = ["-O3", "-std=c++17"]
@@ -28,19 +30,36 @@ if torch.version.hip:
     _extra_cuda_cflags += ["-DUSE_ROCM", "-U__CUDA_NO_HALF_CONVERSIONS__"]
 
 _ops = None
+_ops_mtime = 0.0  # max mtime of sources when _ops was built
+
+
+def _get_src_mtime():
+    """Get the newest mtime across all .cu/.cuh/.cpp sources."""
+    srcs = glob.glob(os.path.join(_CSRC_DIR, "*.cu")) + \
+           glob.glob(os.path.join(_CSRC_DIR, "*.cuh")) + \
+           glob.glob(os.path.join(_CSRC_DIR, "*.cpp"))
+    return max((os.path.getmtime(f) for f in srcs), default=0.0)
+
 
 def get_ops():
-    global _ops
-    if _ops is None:
-        _ops = load(
-            name="custom_all_reduce_dev",
-            sources=[os.path.join(_CSRC_DIR, "custom_all_reduce_pybind.cu")],
-            extra_cflags=_extra_cflags,
-            extra_cuda_cflags=_extra_cuda_cflags,
-            extra_include_paths=[_CSRC_DIR],
-            build_directory=os.path.join(_CSRC_DIR, "build"),
-            verbose=True,
-        )
+    """Load the C++ extension, auto-recompile if any source file changed."""
+    global _ops, _ops_mtime
+    src_mtime = _get_src_mtime()
+    if _ops is not None and src_mtime <= _ops_mtime:
+        return _ops
+    if _ops is not None:
+        print("[custom_ar_dev] source changed, recompiling...")
+    os.makedirs(_BUILD_DIR, exist_ok=True)
+    _ops = load(
+        name="custom_all_reduce_dev",
+        sources=[os.path.join(_CSRC_DIR, "custom_all_reduce_pybind.cu")],
+        extra_cflags=_extra_cflags,
+        extra_cuda_cflags=_extra_cuda_cflags,
+        extra_include_paths=[_CSRC_DIR],
+        build_directory=_BUILD_DIR,
+        verbose=True,
+    )
+    _ops_mtime = src_mtime
     return _ops
 
 
