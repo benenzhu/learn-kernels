@@ -30,14 +30,14 @@ namespace vllm {
   } while (0)
 
 // Maximal number of blocks in allreduce kernel.
-constexpr int kMaxBlocks = 36;
+constexpr int kMaxBlocks = 128;
 
 // Default number of blocks in allreduce kernel.
 #ifndef USE_ROCM
 const int defaultBlockLimit = 36;
 CUpointer_attribute rangeStartAddrAttr = CU_POINTER_ATTRIBUTE_RANGE_START_ADDR;
 #else
-const int defaultBlockLimit = 16;
+const int defaultBlockLimit = 64;
 hipPointer_attribute rangeStartAddrAttr =
     HIP_POINTER_ATTRIBUTE_RANGE_START_ADDR;
 #endif
@@ -629,4 +629,4 @@ class CustomAllreduce {
  * template void vllm::CustomAllreduce::allreduce<half>(cudaStream_t, half *,
  half *, int, int, int);
 */
-}  // namespace vllm
+}  // namespace vllm// test rebuild
