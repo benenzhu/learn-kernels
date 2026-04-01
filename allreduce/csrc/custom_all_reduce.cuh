@@ -556,7 +556,22 @@ class CustomAllreduce {
 
     size /= d;
     auto bytes = size * sizeof(typename packed_t<T>::P);
+#if defined(USE_ROCM)
+    // Dynamic block count for MI300/MI355X:
+    // - Small tensors: fewer blocks to minimize barrier overhead
+    // - Large tensors: more blocks to maximize XGMI bandwidth utilization
+    int effective_limit;
+    if (bytes <= 256 * 1024) {
+      effective_limit = 16;
+    } else if (bytes <= 2 * 1024 * 1024) {
+      effective_limit = 32;
+    } else {
+      effective_limit = block_limit;  // use full limit (64)
+    }
+    int blocks = std::min(effective_limit, (size + threads - 1) / threads);
+#else
     int blocks = std::min(block_limit, (size + threads - 1) / threads);
+#endif
 
     // Check environment variable once
     const char* env_algo = std::getenv("VLLM_CUSTOM_ALLREDUCE_ALGO");
