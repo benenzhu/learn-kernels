@@ -1,0 +1,35 @@
+==============================================================================================================
+All-Reduce Benchmark (CUDA Graph) | TP=8 | hidden=3072 | graph_cycles=10
+==============================================================================================================
+Scenario     AR call            Size          aiter      busbw    vllm_1stage      busbw    vllm_2stage      busbw
+------------------------------------------------------------------------------------------------------------------
+conc4        AR#1_QK_var         32B           4.7u      0.0G           4.6u      0.0G           4.9u      0.0G
+conc4        AR#2_o_proj      24.0KB           8.8u      4.9G           6.2u      6.9G          10.6u      4.1G
+conc4        AR#3_MoE         24.0KB           8.8u      4.9G           6.2u      6.9G          10.6u      4.1G
+             LAYER TOTAL                      22.4u                     17.0u                     26.1u           
+
+conc256      AR#1_QK_var       2.0KB           5.1u      0.7G           4.6u      0.8G           8.3u      0.4G
+conc256      AR#2_o_proj       1.5MB          13.6u    203.1G          34.4u     79.9G          24.3u    113.3G
+conc256      AR#3_MoE          1.5MB          13.5u    204.1G          34.3u     80.1G          24.3u    113.4G
+             LAYER TOTAL                      32.1u                     73.3u                     56.8u           
+
+conc1024     AR#1_QK_var       8.0KB           6.0u      2.4G           5.5u      2.6G           8.5u      1.7G
+conc1024     AR#2_o_proj       6.0MB          34.5u    319.1G         118.2u     93.1G          57.7u    190.7G
+conc1024     AR#3_MoE          6.0MB          34.4u    320.2G         117.4u     93.8G          57.4u    191.8G
+             LAYER TOTAL                      74.9u                    241.1u                    123.6u           
+
+conc8192     AR#1_QK_var      64.0KB          13.6u      8.4G           7.2u     16.0G          10.4u     11.0G
+conc8192     AR#2_o_proj      48.0MB         226.6u    388.8G         885.8u     99.4G         373.2u    236.0G
+conc8192     AR#3_MoE         48.0MB         225.9u    389.8G         885.3u     99.5G         371.2u    237.3G
+             LAYER TOTAL                     466.1u                   1778.3u                    754.8u           
+
+conc16384    AR#1_QK_var     128.0KB           7.0u     32.8G           8.6u     26.6G          11.1u     20.7G
+conc16384    AR#2_o_proj      96.0MB         441.6u    398.9G        1761.4u    100.0G         725.7u    242.8G
+conc16384    AR#3_MoE         96.0MB         441.6u    398.9G        1762.1u    100.0G         723.4u    243.5G
+             LAYER TOTAL                     890.2u                   3532.2u                   1460.1u           
+
+conc163840   AR#1_QK_var       1.2MB          11.8u    194.6G          29.9u     76.7G          19.9u    115.2G
+conc163840   AR#2_o_proj     960.0MB        4331.1u    406.7G       17454.4u    100.9G        7812.3u    225.5G
+conc163840   AR#3_MoE        960.0MB        4334.4u    406.4G       17458.9u    100.9G        7821.2u    225.2G
+             LAYER TOTAL                    8677.4u                  34943.2u                  15653.4u           
+

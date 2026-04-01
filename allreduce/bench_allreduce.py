@@ -75,7 +75,10 @@ def main():
     scenarios = [
         ("conc4", 4),
         ("conc256", 256),
+        ("conc1024", 1024),
+        ("conc8192", 8192),
         ("conc16384", 16384),
+        ("conc163840", 163840),
     ]
 
     ar_configs = [
