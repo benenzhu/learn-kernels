@@ -30,14 +30,14 @@ namespace vllm {
   } while (0)
 
 // Maximal number of blocks in allreduce kernel.
-constexpr int kMaxBlocks = 128;
+constexpr int kMaxBlocks = 256;
 
 // Default number of blocks in allreduce kernel.
 #ifndef USE_ROCM
 const int defaultBlockLimit = 36;
 CUpointer_attribute rangeStartAddrAttr = CU_POINTER_ATTRIBUTE_RANGE_START_ADDR;
 #else
-const int defaultBlockLimit = 64;
+const int defaultBlockLimit = 128;
 hipPointer_attribute rangeStartAddrAttr =
     HIP_POINTER_ATTRIBUTE_RANGE_START_ADDR;
 #endif
@@ -556,17 +556,29 @@ class CustomAllreduce {
 
     size /= d;
     auto bytes = size * sizeof(typename packed_t<T>::P);
+
+    // Allow overriding block count via env var for tuning
+    const char* env_blocks = std::getenv("VLLM_CUSTOM_AR_BLOCKS");
+    if (env_blocks != nullptr) {
+      int forced_blocks = std::atoi(env_blocks);
+      if (forced_blocks > 0 && forced_blocks <= kMaxBlocks) {
+        block_limit = forced_blocks;
+      }
+    }
+
 #if defined(USE_ROCM)
     // Dynamic block count for MI300/MI355X:
     // - Small tensors: fewer blocks to minimize barrier overhead
     // - Large tensors: more blocks to maximize XGMI bandwidth utilization
     int effective_limit;
-    if (bytes <= 256 * 1024) {
+    if (env_blocks != nullptr) {
+      effective_limit = block_limit;  // env override bypasses dynamic logic
+    } else if (bytes <= 256 * 1024) {
       effective_limit = 16;
     } else if (bytes <= 2 * 1024 * 1024) {
       effective_limit = 32;
     } else {
-      effective_limit = block_limit;  // use full limit (64)
+      effective_limit = block_limit;
     }
     int blocks = std::min(effective_limit, (size + threads - 1) / threads);
 #else
@@ -644,4 +656,4 @@ class CustomAllreduce {
  * template void vllm::CustomAllreduce::allreduce<half>(cudaStream_t, half *,
  half *, int, int, int);
 */
-}  // namespace vllm// test rebuild
+}  // namespace vllm
