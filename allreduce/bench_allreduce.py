@@ -129,7 +129,7 @@ def main():
             print(f"{'='*100}")
             header = f"{'tokens':>8} {'shape':>16} {'size':>8}"
             for n in be_names:
-                header += f" {n+'/us':>10} {n+'/bw':>10}"
+                header += f" {n+'/us':>10} {n+'/bw':>10} {'':>4}"
             print(header)
             print("-" * len(header))
 
@@ -139,8 +139,7 @@ def main():
             data_bytes = tensor.numel() * tensor.element_size()
             ar_data = 2.0 * (world_size - 1) / world_size * data_bytes
 
-            row = f"{ntok:>8} {str(shape):>16} {format_bytes(data_bytes):>8}"
-
+            results = {}  # name -> (lat, bw)
             for name, comm, fn, should_fn, env in backends:
                 saved = {k: os.environ.get(k) for k in env}
                 for k, v in env.items():
@@ -151,14 +150,24 @@ def main():
                     for k, orig in saved.items():
                         if orig is None: os.environ.pop(k, None)
                         else: os.environ[k] = orig
-
-                if lat is None:
-                    row += f" {'N/A':>10} {'':>10}"
-                else:
+                if lat is not None:
                     bw = ar_data / (lat * 1e-6) / 1e9 if lat > 0 else 0
-                    row += f" {lat:>9.1f}u {bw:>8.1f}G"
+                    results[name] = (lat, bw)
 
             if rank == 0:
+                # find best (lowest latency)
+                best_name = min(results, key=lambda n: results[n][0]) if results else None
+                best_lat = results[best_name][0] if best_name else 0
+
+                row = f"{ntok:>8} {str(shape):>16} {format_bytes(data_bytes):>8}"
+                for name, *_ in backends:
+                    if name in results:
+                        lat, bw = results[name]
+                        pct = best_lat / lat * 100 if lat > 0 else 0
+                        tag = " *" if name == best_name else f" {pct:>3.0f}%"
+                        row += f" {lat:>9.1f}u {bw:>8.1f}G{tag}"
+                    else:
+                        row += f" {'N/A':>10} {'':>10}    "
                 print(row)
 
         if rank == 0:
