@@ -1,57 +1,24 @@
 #!/usr/bin/env python3
 """
-Benchmark all-reduce latency: torch (NCCL) vs aiter vs vllm custom AR.
-
-Model: MiniMax-M2.5, hidden_size=3072, bf16
-Scenarios: conc4 (4 tokens), conc256 (256 tokens), conc16384 (16384 tokens)
-Per-layer AR calls: #1 QK-var, #2 o_proj, #3 MoE output
+Benchmark all-reduce latency: aiter vs vllm custom AR (1stage/2stage).
+Flow aligned with vllm/benchmarks/kernels/benchmark_device_communicators.py
+Uses CUDA Graph capture & replay for timing.
 
 Usage:
     torchrun --nproc_per_node=8 bench_allreduce.py
 """
 
 import time
+import os
 
 import torch
 import torch.distributed as dist
 
 HIDDEN_SIZE = 3072
 DTYPE = torch.bfloat16
-WARMUP = 50
-TRIALS = 200
-
-
-# ---------------------------------------------------------------------------
-# Timing helpers
-# ---------------------------------------------------------------------------
-
-def bench_eager(fn, warmup, trials):
-    """Wall-clock timing. Returns avg latency in us."""
-    for _ in range(warmup):
-        fn()
-    torch.cuda.synchronize()
-    start = time.perf_counter()
-    for _ in range(trials):
-        fn()
-    torch.cuda.synchronize()
-    return (time.perf_counter() - start) / trials * 1e6
-
-
-def bench_event(fn, warmup, trials):
-    """CUDA event timing (pure GPU). Returns avg latency in us."""
-    for _ in range(warmup):
-        fn()
-    torch.cuda.synchronize()
-    starts = [torch.cuda.Event(enable_timing=True) for _ in range(trials)]
-    ends = [torch.cuda.Event(enable_timing=True) for _ in range(trials)]
-    for i in range(trials):
-        starts[i].record()
-        fn()
-        ends[i].record()
-    torch.cuda.synchronize()
-    times = sorted(s.elapsed_time(e) * 1000 for s, e in zip(starts, ends))
-    lo, hi = len(times) // 10, len(times) - len(times) // 10
-    return sum(times[lo:hi]) / (hi - lo)
+CUDA_GRAPH_CAPTURE_CYCLES = 10
+NUM_WARMUP = 5
+NUM_TRIALS = 50
 
 
 def format_bytes(b):
@@ -62,49 +29,48 @@ def format_bytes(b):
     return f"{b / 1024 / 1024:.1f}MB"
 
 
-# ---------------------------------------------------------------------------
-# Init communicators
-# ---------------------------------------------------------------------------
-
-def init_aiter_custom_ar(gloo_group, device, max_size):
-    """Init aiter CustomAllreduce. Returns (comm, name) or None."""
-    try:
-        from aiter.dist.device_communicators.custom_all_reduce import CustomAllreduce
-        comm = CustomAllreduce(group=gloo_group, device=device, max_size=max_size)
-        if comm.disabled:
-            return None
-        return comm
-    except Exception as e:
-        print(f"  [aiter] init failed: {e}")
+def benchmark_single(allreduce_fn, should_use_fn, comm, tensor):
+    """Benchmark one communicator with CUDA graph, matching vllm's flow."""
+    if not should_use_fn(tensor):
         return None
 
+    torch.cuda.synchronize()
+    stream = torch.cuda.Stream()
+    with torch.cuda.stream(stream):
+        graph_input = tensor.clone()
 
-def init_vllm_custom_ar(gloo_group, device, max_size):
-    """Init vllm CustomAllreduce. Returns comm or None."""
-    try:
-        from vllm.distributed.device_communicators.custom_all_reduce import CustomAllreduce
-        comm = CustomAllreduce(group=gloo_group, device=device, max_size=max_size)
-        if comm.disabled:
-            return None
-        return comm
-    except Exception as e:
-        print(f"  [vllm] init failed: {e}")
-        return None
+        for _ in range(3):
+            allreduce_fn(graph_input)
 
+        with comm.capture():
+            graph = torch.cuda.CUDAGraph()
+            with torch.cuda.graph(graph, stream=stream):
+                for _ in range(CUDA_GRAPH_CAPTURE_CYCLES):
+                    allreduce_fn(graph_input)
 
-# ---------------------------------------------------------------------------
-# Main
-# ---------------------------------------------------------------------------
+    torch.cuda.synchronize()
+    for _ in range(NUM_WARMUP):
+        graph.replay()
+    torch.cuda.synchronize()
+
+    start = time.perf_counter()
+    for _ in range(NUM_TRIALS):
+        graph.replay()
+    torch.cuda.synchronize()
+    end = time.perf_counter()
+
+    return (end - start) / NUM_TRIALS / CUDA_GRAPH_CAPTURE_CYCLES * 1e6
+
 
 def main():
-    dist.init_process_group(backend="nccl")
+    if not dist.is_initialized():
+        dist.init_process_group(backend="gloo")
     rank = dist.get_rank()
     world_size = dist.get_world_size()
-    torch.cuda.set_device(rank)
     device = torch.device(f"cuda:{rank}")
+    torch.cuda.set_device(device)
 
-    # gloo group needed for custom AR IPC exchange
-    gloo_group = dist.new_group(backend="gloo")
+    cpu_group = dist.new_group(backend="gloo")
 
     scenarios = [
         ("conc4", 4),
@@ -118,128 +84,116 @@ def main():
         ("AR#3_MoE",    lambda n: (n, HIDDEN_SIZE), DTYPE),
     ]
 
-    # Compute max buffer size needed
     max_tokens = max(n for _, n in scenarios)
-    max_bytes = max_tokens * HIDDEN_SIZE * 2  # bf16
-    max_size = max_bytes * 2 + 4096  # 2x for 2-stage + margin
+    max_bytes = max_tokens * HIDDEN_SIZE * 2
+    max_size = max_bytes * 2 + 4096
 
-    # Init custom AR communicators
-    if rank == 0:
-        print("Initializing communicators...")
-    aiter_comm = init_aiter_custom_ar(gloo_group, device, max_size)
-    vllm_comm = init_vllm_custom_ar(gloo_group, device, max_size)
+    # --- init communicators ---
+    aiter_comm = None
+    try:
+        from aiter.dist.device_communicators.custom_all_reduce import CustomAllreduce as AiterAR
+        aiter_comm = AiterAR(group=cpu_group, device=device, max_size=max_size)
+        if aiter_comm.disabled:
+            aiter_comm = None
+    except Exception as e:
+        if rank == 0:
+            print(f"  [aiter] init failed: {e}")
+
+    vllm_comm = None
+    try:
+        from vllm.distributed.device_communicators.custom_all_reduce import CustomAllreduce as VllmAR
+        vllm_comm = VllmAR(group=cpu_group, device=device, max_size=max_size)
+        if vllm_comm.disabled:
+            vllm_comm = None
+    except Exception as e:
+        if rank == 0:
+            print(f"  [vllm] init failed: {e}")
 
     if rank == 0:
-        print(f"  torch/NCCL: OK")
-        print(f"  aiter custom AR: {'OK' if aiter_comm else 'DISABLED'}")
-        print(f"  vllm custom AR:  {'OK' if vllm_comm else 'DISABLED'}")
+        print(f"  aiter: {'OK' if aiter_comm else 'DISABLED'}")
+        print(f"  vllm:  {'OK' if vllm_comm else 'DISABLED'}")
         print()
 
-    # Build list of backends to test
-    backends = []
-
-    # 1) torch NCCL
-    def make_nccl_fn(t):
-        def fn():
-            dist.all_reduce(t)
-        return fn
-    backends.append(("nccl", make_nccl_fn, None))
-
-    # 2) aiter custom AR
+    # --- communicator configs ---
+    # (name, comm, allreduce_fn, should_use_fn, env_dict)
+    configs = []
     if aiter_comm:
-        def make_aiter_fn(t, comm=aiter_comm):
-            out = torch.empty_like(t)
-            def fn():
-                comm.all_reduce(t, out=out)
-            return fn
-        backends.append(("aiter", make_aiter_fn, aiter_comm))
-
-    # 3) vllm custom AR
+        c = aiter_comm
+        configs.append((
+            "aiter", c,
+            lambda t, c=c: c.custom_all_reduce(t),
+            lambda t, c=c: c.should_custom_ar(t),
+            {},
+        ))
     if vllm_comm:
-        def make_vllm_fn(t, comm=vllm_comm):
-            def fn():
-                comm.all_reduce(t)
-            return fn
-        backends.append(("vllm", make_vllm_fn, vllm_comm))
+        c = vllm_comm
+        configs.append((
+            "vllm_1stage", c,
+            lambda t, c=c: c.custom_all_reduce(t),
+            lambda t, c=c: c.should_custom_ar(t),
+            {"VLLM_CUSTOM_ALLREDUCE_ALGO": "1stage"},
+        ))
+        configs.append((
+            "vllm_2stage", c,
+            lambda t, c=c: c.custom_all_reduce(t),
+            lambda t, c=c: c.should_custom_ar(t),
+            {"VLLM_CUSTOM_ALLREDUCE_ALGO": "2stage"},
+        ))
 
-    # Print header
     if rank == 0:
-        print(f"{'='*120}")
-        print(f"MiniMax-M2.5 All-Reduce Benchmark | TP={world_size} | "
-              f"hidden={HIDDEN_SIZE} | dtype={DTYPE}")
-        print(f"warmup={WARMUP}, trials={TRIALS}")
-        print(f"{'='*120}")
-
-        be_names = [name for name, _, _ in backends]
+        print(f"{'='*110}")
+        print(f"All-Reduce Benchmark (CUDA Graph) | TP={world_size} | "
+              f"hidden={HIDDEN_SIZE} | graph_cycles={CUDA_GRAPH_CAPTURE_CYCLES}")
+        print(f"{'='*110}")
+        names = [name for name, *_ in configs]
         header = f"{'Scenario':<12} {'AR call':<14} {'Size':>8}"
-        for name in be_names:
-            header += f" {name+'/eager':>12} {name+'/event':>12}"
+        for n in names:
+            header += f" {n:>14} {'busbw':>10}"
         print(header)
         print("-" * len(header))
 
-    # Global warmup: run every backend × shape combination to eliminate
-    # first-call JIT/plan overhead before any measurement
-    if rank == 0:
-        print("Global warmup (all backends × all shapes)...")
-    for _, num_tokens in scenarios:
-        for _, shape_fn, dtype in ar_configs:
-            shape = shape_fn(num_tokens)
-            tensor = torch.randn(shape, dtype=dtype, device=device)
-            for name, make_fn, comm in backends:
-                skip = comm is not None and hasattr(comm, 'should_custom_ar') and not comm.should_custom_ar(tensor)
-                if not skip:
-                    fn = make_fn(tensor)
-                    for _ in range(20):
-                        fn()
-    torch.cuda.synchronize()
-    if rank == 0:
-        print("Global warmup done.\n")
-
-    # Run benchmarks
     for scen_name, num_tokens in scenarios:
-        totals_eager = {name: 0.0 for name, _, _ in backends}
-        totals_event = {name: 0.0 for name, _, _ in backends}
+        totals = {name: 0.0 for name, *_ in configs}
 
         for ar_name, shape_fn, dtype in ar_configs:
             shape = shape_fn(num_tokens)
             tensor = torch.randn(shape, dtype=dtype, device=device)
             data_bytes = tensor.numel() * tensor.element_size()
+            ar_data = 2.0 * (world_size - 1) / world_size * data_bytes
 
             row = f"{scen_name:<12} {ar_name:<14} {format_bytes(data_bytes):>8}"
 
-            for name, make_fn, comm in backends:
-                # Check if custom AR supports this size
-                skip = False
-                if comm is not None:
-                    if hasattr(comm, 'should_custom_ar') and not comm.should_custom_ar(tensor):
-                        skip = True
+            for name, comm, allreduce_fn, should_use_fn, env_dict in configs:
+                saved = {k: os.environ.get(k) for k in env_dict}
+                for k, v in env_dict.items():
+                    os.environ[k] = v
+                try:
+                    lat = benchmark_single(allreduce_fn, should_use_fn, comm, tensor)
+                finally:
+                    for k, orig in saved.items():
+                        if orig is None:
+                            os.environ.pop(k, None)
+                        else:
+                            os.environ[k] = orig
 
-                if skip:
-                    row += f" {'N/A':>12} {'N/A':>12}"
+                if lat is None:
+                    row += f" {'N/A':>14} {'':>10}"
                 else:
-                    fn = make_fn(tensor)
-                    lat_eager = bench_eager(fn, WARMUP, TRIALS)
-                    lat_event = bench_event(fn, WARMUP, TRIALS)
-                    totals_eager[name] += lat_eager
-                    totals_event[name] += lat_event
-                    row += f" {lat_eager:>11.1f}u {lat_event:>11.1f}u"
+                    totals[name] += lat
+                    bw = ar_data / (lat * 1e-6) / 1e9 if lat > 0 else 0
+                    row += f" {lat:>13.1f}u {bw:>8.1f}G"
 
             if rank == 0:
                 print(row)
 
-        # Print layer totals
         if rank == 0:
             row = f"{'':>12} {'LAYER TOTAL':<14} {'':>8}"
-            for name, _, _ in backends:
-                e, v = totals_eager[name], totals_event[name]
-                if e > 0:
-                    row += f" {e:>11.1f}u {v:>11.1f}u"
-                else:
-                    row += f" {'N/A':>12} {'N/A':>12}"
+            for name, *_ in configs:
+                v = totals[name]
+                row += f" {v:>13.1f}u {'':>10}"
             print(row)
             print()
 
-    # Cleanup
     if aiter_comm:
         aiter_comm.close()
     if vllm_comm:
