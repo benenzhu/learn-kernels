@@ -145,6 +145,35 @@ def main():
 
     be_names = [n for n, *_ in backends]
 
+    # --- correctness verification ---
+    if rank == 0:
+        print("Verifying correctness...")
+    verify_sizes = [128, 4096, 512 * 1024]
+    for sz in verify_sizes:
+        for dtype in [torch.float32, torch.bfloat16]:
+            # use integers to get bit-exact results
+            inp = torch.randint(1, 16, (sz,), dtype=dtype, device=device)
+            # NCCL reference
+            ref = inp.clone()
+            dist.all_reduce(ref)
+            for name, comm, fn, should_fn, env in backends:
+                saved = {k: os.environ.get(k) for k in env}
+                for k, v in env.items():
+                    os.environ[k] = v
+                try:
+                    test_inp = inp.clone()
+                    if should_fn(test_inp):
+                        out = fn(test_inp)
+                        if out is not None:
+                            torch.testing.assert_close(out, ref, rtol=0, atol=0)
+                finally:
+                    for k, orig in saved.items():
+                        if orig is None: os.environ.pop(k, None)
+                        else: os.environ[k] = orig
+    if rank == 0:
+        print("All backends verified OK.\n")
+
+    # --- benchmark ---
     for pat_name, shape_fn, dtype in patterns:
         if rank == 0:
             print(f"{'='*100}")
