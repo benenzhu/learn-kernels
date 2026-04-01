@@ -152,7 +152,7 @@ def main():
             print(f"{'='*100}")
             header = f"{'tokens':>8} {'shape':>16} {'size':>8}"
             for n in be_names:
-                header += f" {n+'/us':>10} {n+'/bw':>10} {'':>4}"
+                header += f" {n+'/us':>10} {n+'/bw':>10} {'':>5}"
             print(header)
             print("-" * len(header))
 
@@ -187,10 +187,12 @@ def main():
                     if name in results:
                         lat, bw = results[name]
                         pct = best_lat / lat * 100 if lat > 0 else 0
-                        tag = " *" if name == best_name else f" {pct:>3.0f}%"
-                        row += f" {lat:>9.1f}u {bw:>8.1f}G{tag}"
+                        tag = "*" if name == best_name else f"{pct:.0f}%"
+                        lat_s = f"{lat:.1f}u"
+                        bw_s = f"{bw:.1f}G"
+                        row += f" {lat_s:>10} {bw_s:>10} {tag:>5}"
                     else:
-                        row += f" {'N/A':>10} {'':>10}    "
+                        row += f" {'N/A':>10} {'N/A':>10} {'':>5}"
                 print(row)
 
         if rank == 0:
