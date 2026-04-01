@@ -194,12 +194,45 @@ else
 | 目标硬件 | gfx942 (MI300X) | gfx950 (MI355X) 专用 |
 | 调度控制 | CK 框架管理 | 完全手工优化 |
 
+## Benchmark 结果
+
+通过 ctypes 直接加载 `.co` 并用 `hipModuleLaunchKernel` launch（绕过 aiter JIT）。
+`do_bench` 包含 CPU launch overhead。
+
+```
+o_proj TP=8: weight [3072, 768], do_bench median
+     M |   CK(us) |  ASM(us) | BF16(us) |  ASM/CK | WGs
+------------------------------------------------------------
+    32 |     7.6  |    14.1  |    12.4  |   1.84x | 12
+    64 |     7.6  |    17.0  |    12.6  |   2.23x | 12
+   128 |     7.6  |    17.3  |    13.3  |   2.27x | 12
+   256 |     9.8  |    17.1  |    13.0  |   1.75x | 24
+```
+
+ASM kernel 比 CK 慢 ~2x，可能原因：
+1. ctypes launch 比 C++ JIT launch 有额外 Python/ctypes overhead (~5-7 us)
+2. preshuffle layout 可能不完全匹配（`shuffle_weight(layout=(16,16))` 可能不是 blockscale 专用）
+3. Scale 转置是否正确待验证（CK: `[M, K/128]`, ASM: `[K/128, M]`）
+
+## Split-K 问题
+
+**Split-K 无法直接启用**：splitk>0 时 kernel 用 `global_atomic_add_f32` 写 output，
+要求 output buffer 按 FP32 (4B/elem) 布局，但 host 分配的是 BF16 (2B/elem)。
+直接传 splitk>0 会导致越界写入（"Write access to a read-only page"）。
+
+启用 split-K 需要：
+1. 分配 FP32 output buffer `[M, N]`
+2. 传 splitk=log2(num_splits) + gdz=num_splits
+3. Kernel 完成后手动 FP32→BF16 转换
+
 ## 关键发现
 
 1. **gfx950 超宽 MFMA**：`v_mfma_f32_16x16x128_f8f6f4` 单指令 K=128，正好等于 block-scale group size，意味着**一条 MFMA 恰好对应一个 scale group**，天然匹配 block-scale 量化
 
-2. **Split-K 隐藏能力**：kernel 已实现 atomic 累加的 split-K 路径，只是 host 没开。对我们的小 shape (N=K=3072) 可能有用——如果能 hack host launcher 传 splitk > 0
+2. **Split-K 内置但不可直接用**：kernel 支持 split-K（atomic add），但 output 需要 FP32 buffer；host launcher 硬编码 splitk=0 且没有 FP32 output 路径
 
-3. **B-preshuffle 是前置要求**：weight 需要特殊 layout 变换，aiter 应该有对应工具（待查找 `shuffle_weight` 或 `preshuffle`）
+3. **B-preshuffle**：使用 `aiter.ops.shuffle.shuffle_weight(w, layout=(16,16))`，Scale 需要转置（CK `[M,K/128]` → ASM `[K/128,M]`）
 
 4. **纯寄存器 scale 广播**：DPP `row_newbcast` 避免了 scale 数据走 LDS，减少 LDS bank conflict 和同步开销
+
+5. **ctypes launch 可用但有额外开销**：aiter JIT 编译 `module_gemm_gfx950_a8w8_blockscale_asm` 失败（缺源文件），但可通过 ctypes + HIP runtime 直接加载 `.co` 并 launch
