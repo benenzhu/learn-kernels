@@ -19,9 +19,9 @@ import torch
 import torch.distributed as dist
 
 HIDDEN_SIZE = 3072
-GRAPH_CYCLES = 10
-NUM_WARMUP = 5
-NUM_TRIALS = 50
+GRAPH_CYCLES = 20
+NUM_WARMUP = 10
+NUM_TRIALS = 200
 
 
 def format_bytes(b):
@@ -51,6 +51,12 @@ def benchmark_single(allreduce_fn, should_use_fn, comm, tensor):
         graph.replay()
     torch.cuda.synchronize()
     start = time.perf_counter()
+    oneM = 1024 * 1024
+    if tensor.numel() > oneM:
+        global NUM_TRIALS
+        NUM_TRIALS = 50
+        if tensor.numel() > 2 * oneM: 
+            NUM_TRIALS = 25
     for _ in range(NUM_TRIALS):
         graph.replay()
     torch.cuda.synchronize()
@@ -98,9 +104,21 @@ def main():
     except Exception as e:
         if rank == 0: print(f"  [vllm] init failed: {e}")
 
+    dev_comm = None
+    try:
+        import sys
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        from custom_ar_dev import CustomAllreduce as DevAR
+        dev_comm = DevAR(group=cpu_group, device=device, max_size=max_size)
+        if dev_comm.disabled:
+            dev_comm = None
+    except Exception as e:
+        if rank == 0: print(f"  [dev] init failed: {e}")
+
     if rank == 0:
         print(f"aiter: {'OK' if aiter_comm else 'DISABLED'}, "
-              f"vllm: {'OK' if vllm_comm else 'DISABLED'}\n")
+              f"vllm: {'OK' if vllm_comm else 'DISABLED'}, "
+              f"dev: {'OK' if dev_comm else 'DISABLED'}\n")
 
     # backend configs: (name, comm, fn, should_fn, env)
     backends = []
@@ -119,6 +137,11 @@ def main():
             lambda t, c=c: c.custom_all_reduce(t),
             lambda t, c=c: c.should_custom_ar(t),
             {"VLLM_CUSTOM_ALLREDUCE_ALGO": "2stage"}))
+    if dev_comm:
+        c = dev_comm
+        backends.append(("dev", c,
+            lambda t, c=c: c.custom_all_reduce(t),
+            lambda t, c=c: c.should_custom_ar(t), {}))
 
     be_names = [n for n, *_ in backends]
 
@@ -175,6 +198,7 @@ def main():
 
     if aiter_comm: aiter_comm.close()
     if vllm_comm: vllm_comm.close()
+    if dev_comm: dev_comm.close()
     dist.destroy_process_group()
 
 
