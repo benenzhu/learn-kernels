@@ -1,0 +1,3 @@
+csrc/build/
+*.so
+__pycache__/
