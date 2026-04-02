@@ -218,7 +218,7 @@ DINLINE void barrier_at_start(const RankSignals& sg, Signal* self_sg,
     // wait until we got true from all ranks
     while (__scoped_atomic_load_n(&self_sg->start[blockIdx.x][threadIdx.x],
                                   __ATOMIC_RELAXED,
-                                  __MEMORY_SCOPE_DEVICE) < flag) __builtin_amdgcn_s_sleep(20);
+                                  __MEMORY_SCOPE_DEVICE) < flag);
   }
   __syncthreads();
   // use one thread to update flag
@@ -240,7 +240,7 @@ DINLINE void barrier_at_end(const RankSignals& sg, Signal* self_sg, int rank) {
     while (
         __scoped_atomic_load_n(&self_sg->end[blockIdx.x][threadIdx.x],
                                final_sync ? __ATOMIC_RELAXED : __ATOMIC_ACQUIRE,
-                               __MEMORY_SCOPE_DEVICE) < flag) __builtin_amdgcn_s_sleep(20);
+                               __MEMORY_SCOPE_DEVICE) < flag);
   }
   if constexpr (!final_sync) __syncthreads();
   // use one thread to update flag
@@ -483,10 +483,13 @@ void CustomAllreduce::allreduce(hipStream_t stream, T* input, T* output,
 #else
     int blocks = std::min(block_limit, (size + threads - 1) / threads);
 #endif
-    if(size != origin_size || blocks != origin_blocks) {
+    if (size != origin_size || blocks != origin_blocks) {
       origin_size = size;
       origin_blocks = blocks;
-      fprintf(stderr, "size: %d, blocks: %d, origin_size: %d\n", size, blocks, origin_size);
+      // if (rank_ == 0) {
+      //   fprintf(stderr, "size: %d, blocks: %d, origin_size: %d\n", size, blocks,
+      //           origin_size);
+      // }
     }
 
     // Check environment variable once
