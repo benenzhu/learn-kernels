@@ -17,6 +17,7 @@ import os
 
 import torch
 import torch.distributed as dist
+from contextlib import nullcontext
 
 HIDDEN_SIZE = 3072
 GRAPH_CYCLES = 20
@@ -79,6 +80,7 @@ def main():
     patterns = [
         ("f32",  lambda n: (n, 2),          torch.float32),
         ("bf16", lambda n: (n, HIDDEN_SIZE), torch.bfloat16),
+        # ("f32_H", lambda n: (n, HIDDEN_SIZE // 2), torch.float32),
     ]
 
     # max buffer for communicator init
@@ -183,6 +185,7 @@ def main():
         print(f"All verified OK ({n_checks} checks passed).\n")
 
     # --- benchmark ---
+
     for pat_name, shape_fn, dtype in patterns:
         if rank == 0:
             print(f"{'='*100}")
@@ -201,19 +204,37 @@ def main():
             ar_data = 2.0 * (world_size - 1) / world_size * data_bytes
 
             results = {}  # name -> (lat, bw)
-            for name, comm, fn, should_fn, env in backends:
-                saved = {k: os.environ.get(k) for k in env}
-                for k, v in env.items():
-                    os.environ[k] = v
-                try:
-                    lat = benchmark_single(fn, should_fn, comm, tensor)
-                finally:
-                    for k, orig in saved.items():
-                        if orig is None: os.environ.pop(k, None)
-                        else: os.environ[k] = orig
-                if lat is not None:
-                    bw = ar_data / (lat * 1e-6) / 1e9 if lat > 0 else 0
-                    results[name] = (lat, bw)
+            USE_PROF = os.environ.get("ZZ_PERF", "")
+            if USE_PROF and rank == 0:
+                trace_dir = f"./GRAPH_CAP"
+                profiler = torch.profiler.profile(
+                            activities=[
+                                torch.profiler.ProfilerActivity.CPU,
+                                torch.profiler.ProfilerActivity.CUDA,
+                            ],
+                            record_shapes=True,
+                            profile_memory=True,
+                            with_stack=True,
+                            on_trace_ready=torch.profiler.tensorboard_trace_handler(
+                                trace_dir, worker_name=f"benchmark_{pat_name}_{dtype}_{ntok}", use_gzip=True
+                            ),
+                        )
+            else:
+                profiler = nullcontext()
+            with profiler:
+                for name, comm, fn, should_fn, env in backends:
+                    saved = {k: os.environ.get(k) for k in env}
+                    for k, v in env.items():
+                        os.environ[k] = v
+                    try:
+                        lat = benchmark_single(fn, should_fn, comm, tensor)
+                    finally:
+                        for k, orig in saved.items():
+                            if orig is None: os.environ.pop(k, None)
+                            else: os.environ[k] = orig
+                    if lat is not None:
+                        bw = ar_data / (lat * 1e-6) / 1e9 if lat > 0 else 0
+                        results[name] = (lat, bw)
 
             if rank == 0:
                 # find best (lowest latency)

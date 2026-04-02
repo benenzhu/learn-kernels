@@ -1,9 +1,15 @@
 #pragma once
+int origin_size = 0;
+int origin_blocks = 0;
 
-#include <cuda.h>
-#include <cuda_bf16.h>
-#include <cuda_fp16.h>
-#include <cuda_runtime.h>
+// #include <cuda.h>
+// #include <cuda_bf16.h>
+// #include <cuda_fp16.h>
+// #include <cuda_runtime.h>
+#include <hip/hip_runtime.h>
+#include <hip/hip_bf16.h>
+#include <hip/hip_fp16.h>
+#include <hip/hip_runtime.h>
 
 #if defined(USE_ROCM)
 typedef __hip_bfloat16 nv_bfloat16;
@@ -19,12 +25,21 @@ typedef __hip_bfloat16 nv_bfloat16;
 #include <cstring>
 
 namespace vllm {
+// #define CUDACHECK(cmd)                                              \
+//   do {                                                              \
+//     cudaError_t e = cmd;                                            \
+//     if (e != cudaSuccess) {                                         \
+//       printf("Failed: Cuda error %s:%d '%s'\n", __FILE__, __LINE__, \
+//              cudaGetErrorString(e));                                \
+//       exit(EXIT_FAILURE);                                           \
+//     }                                                               \
+//   } while (0)
 #define CUDACHECK(cmd)                                              \
   do {                                                              \
-    cudaError_t e = cmd;                                            \
-    if (e != cudaSuccess) {                                         \
+    hipError_t e = cmd;                                            \
+    if (e != hipSuccess) {                                         \
       printf("Failed: Cuda error %s:%d '%s'\n", __FILE__, __LINE__, \
-             cudaGetErrorString(e));                                \
+             hipGetErrorString(e));                                \
       exit(EXIT_FAILURE);                                           \
     }                                                               \
   } while (0)
@@ -35,7 +50,7 @@ constexpr int kMaxBlocks = 256;
 // Default number of blocks in allreduce kernel.
 #ifndef USE_ROCM
 const int defaultBlockLimit = 36;
-CUpointer_attribute rangeStartAddrAttr = CU_POINTER_ATTRIBUTE_RANGE_START_ADDR;
+hipPointer_attribute rangeStartAddrAttr = CU_POINTER_ATTRIBUTE_RANGE_START_ADDR;
 #else
 const int defaultBlockLimit = 128;
 hipPointer_attribute rangeStartAddrAttr =
@@ -254,7 +269,7 @@ DINLINE void barrier_at_start(const RankSignals& sg, Signal* self_sg,
     // wait until we got true from all ranks
     while (__scoped_atomic_load_n(&self_sg->start[blockIdx.x][threadIdx.x],
                                   __ATOMIC_RELAXED,
-                                  __MEMORY_SCOPE_DEVICE) < flag);
+                                  __MEMORY_SCOPE_DEVICE) < flag) __builtin_amdgcn_s_sleep(20);
   }
   __syncthreads();
   // use one thread to update flag
@@ -276,7 +291,7 @@ DINLINE void barrier_at_end(const RankSignals& sg, Signal* self_sg, int rank) {
     while (
         __scoped_atomic_load_n(&self_sg->end[blockIdx.x][threadIdx.x],
                                final_sync ? __ATOMIC_RELAXED : __ATOMIC_ACQUIRE,
-                               __MEMORY_SCOPE_DEVICE) < flag);
+                               __MEMORY_SCOPE_DEVICE) < flag) __builtin_amdgcn_s_sleep(20);
   }
   if constexpr (!final_sync) __syncthreads();
   // use one thread to update flag
@@ -296,7 +311,7 @@ DINLINE P packed_reduce(const P* ptrs[], int idx) {
 }
 
 template <typename T, int ngpus>
-__global__ void __launch_bounds__(512, 1)
+__global__ void __launch_bounds__(512, 1)  
     cross_device_reduce_1stage(RankData* _dp, RankSignals sg, Signal* self_sg,
                                T* __restrict__ result, int rank, int size) {
   using P = typename packed_t<T>::P;
@@ -365,9 +380,9 @@ __global__ void __launch_bounds__(512, 1)
   }
 }
 
-using IPC_KEY = std::array<uint8_t, sizeof(cudaIpcMemHandle_t)>;
-static_assert(sizeof(IPC_KEY) == sizeof(cudaIpcMemHandle_t));
-static_assert(alignof(IPC_KEY) == alignof(cudaIpcMemHandle_t));
+using IPC_KEY = std::array<uint8_t, sizeof(hipIpcMemHandle_t)>;
+static_assert(sizeof(IPC_KEY) == sizeof(hipIpcMemHandle_t));
+static_assert(alignof(IPC_KEY) == alignof(hipIpcMemHandle_t));
 
 class CustomAllreduce {
  public:
@@ -431,9 +446,9 @@ class CustomAllreduce {
         ipc_handles_.insert({*((IPC_KEY*)ipc_handle), nullptr});
     if (new_handle) {
       char* ipc_ptr;
-      CUDACHECK(cudaIpcOpenMemHandle((void**)&ipc_ptr,
-                                     *((const cudaIpcMemHandle_t*)ipc_handle),
-                                     cudaIpcMemLazyEnablePeerAccess));
+      CUDACHECK(hipIpcOpenMemHandle((void**)&ipc_ptr,
+                                     *((const hipIpcMemHandle_t*)ipc_handle),
+                                     hipIpcMemLazyEnablePeerAccess));
       it->second = ipc_ptr;
     }
     return it->second;
@@ -441,7 +456,7 @@ class CustomAllreduce {
 
   std::pair<std::string, std::vector<int64_t>> get_graph_buffer_ipc_meta() {
     auto num_buffers = graph_unreg_buffers_.size();
-    auto handle_sz = sizeof(cudaIpcMemHandle_t);
+    auto handle_sz = sizeof(hipIpcMemHandle_t);
     std::string handles(handle_sz * num_buffers, static_cast<char>(0));
     std::vector<int64_t> offsets(num_buffers);
     for (int i = 0; i < num_buffers; i++) {
@@ -449,11 +464,11 @@ class CustomAllreduce {
       void* base_ptr;
       // note: must share the base address of each allocation, or we get wrong
       // address
-      if (cuPointerGetAttribute(&base_ptr, rangeStartAddrAttr,
-                                (CUdeviceptr)ptr) != CUDA_SUCCESS)
+      if (hipPointerGetAttribute(&base_ptr, rangeStartAddrAttr,
+                                (hipDeviceptr_t)ptr) != hipSuccess)
         throw std::runtime_error("failed to get pointer attr");
-      CUDACHECK(cudaIpcGetMemHandle(
-          (cudaIpcMemHandle_t*)&handles[i * handle_sz], base_ptr));
+      CUDACHECK(hipIpcGetMemHandle(
+          (hipIpcMemHandle_t*)&handles[i * handle_sz], base_ptr));
       offsets[i] = ((char*)ptr) - ((char*)base_ptr);
     }
     return std::make_pair(handles, offsets);
@@ -477,7 +492,7 @@ class CustomAllreduce {
     }
     auto d_data = d_rank_data_base_++;
     CUDACHECK(
-        cudaMemcpy(d_data, &data, sizeof(RankData), cudaMemcpyHostToDevice));
+        hipMemcpy(d_data, &data, sizeof(RankData), hipMemcpyHostToDevice));
     buffers_[ptrs[rank_]] = d_data;
   }
 
@@ -500,7 +515,7 @@ class CustomAllreduce {
       for (int j = 0; j < world_size_; j++) {
         if (j != rank_) {
           char* handle =
-              open_ipc_handle(&handles[j][i * sizeof(cudaIpcMemHandle_t)]);
+              open_ipc_handle(&handles[j][i * sizeof(hipIpcMemHandle_t)]);
           handle += offsets[j][i];
           rd.ptrs[j] = handle;
         } else {
@@ -508,9 +523,9 @@ class CustomAllreduce {
         }
       }
     }
-    CUDACHECK(cudaMemcpy(d_rank_data_base_, rank_data.data(),
+    CUDACHECK(hipMemcpy(d_rank_data_base_, rank_data.data(),
                          sizeof(RankData) * num_buffers,
-                         cudaMemcpyHostToDevice));
+                         hipMemcpyHostToDevice));
     d_rank_data_base_ += num_buffers;
     graph_unreg_buffers_.clear();
   }
@@ -525,7 +540,7 @@ class CustomAllreduce {
    * but my guess is that too many SMs will cause contention on NVLink bus.
    */
   template <typename T>
-  void allreduce(cudaStream_t stream, T* input, T* output, int size,
+  void allreduce(hipStream_t stream, T* input, T* output, int size,
                  int threads = 512, int block_limit = defaultBlockLimit) {
     auto d = packed_t<T>::P::size;
     if (size % d != 0)
@@ -539,9 +554,9 @@ class CustomAllreduce {
                                std::to_string(block_limit));
 
     RankData* ptrs;
-    cudaStreamCaptureStatus status;
-    CUDACHECK(cudaStreamIsCapturing(stream, &status));
-    if (status == cudaStreamCaptureStatusActive) {
+    hipStreamCaptureStatus status;
+    CUDACHECK(hipStreamIsCapturing(stream, &status));
+    if (status == hipStreamCaptureStatusActive) {
       ptrs = d_rank_data_base_ + graph_unreg_buffers_.size();
       graph_unreg_buffers_.push_back(input);
     } else {
@@ -584,6 +599,11 @@ class CustomAllreduce {
 #else
     int blocks = std::min(block_limit, (size + threads - 1) / threads);
 #endif
+    if(size != origin_size || blocks != origin_blocks) {
+      origin_size = size;
+      origin_blocks = blocks;
+      fprintf(stderr, "size: %d, blocks: %d, origin_size: %d\n", size, blocks, origin_size);
+    }
 
     // Check environment variable once
     const char* env_algo = std::getenv("VLLM_CUSTOM_ALLREDUCE_ALGO");
@@ -604,7 +624,7 @@ class CustomAllreduce {
     }
 
 #define KL(ngpus, name)                                                       \
-  name<T, ngpus><<<blocks, threads, 0, stream>>>(ptrs, sg_, self_sg_, output, \
+ hipLaunchKernelGGL(( name<T, ngpus>), dim3(blocks), dim3(threads), 0, stream, ptrs, sg_, self_sg_, output, \
                                                  rank_, size);
 #define REDUCE_CASE(ngpus)                              \
   case ngpus: {                                         \
@@ -645,7 +665,7 @@ class CustomAllreduce {
 
   ~CustomAllreduce() {
     for (auto [_, ptr] : ipc_handles_) {
-      CUDACHECK(cudaIpcCloseMemHandle(ptr));
+      CUDACHECK(hipIpcCloseMemHandle(ptr));
     }
   }
 };
@@ -653,7 +673,7 @@ class CustomAllreduce {
 /**
  * To inspect PTX/SASS, copy paste this header file to compiler explorer and
  add a template instantiation:
- * template void vllm::CustomAllreduce::allreduce<half>(cudaStream_t, half *,
+ * template void vllm::CustomAllreduce::allreduce<half>(hipStream_t, half *,
  half *, int, int, int);
 */
 }  // namespace vllm

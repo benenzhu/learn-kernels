@@ -133,7 +133,8 @@ def bench_fp8_gemm():
     device = "cuda"
 
     # Pre-generate NUM_INPUTS different weights (avoid cache hits)
-    weights_bf16 = [torch.randn(N, K, dtype=torch.bfloat16, device=device) for _ in range(NUM_INPUTS)]
+    weights_fp32 = [torch.randn(N, K, dtype=torch.float32, device=device) for _ in range(NUM_INPUTS)]
+    weights_bf16 = [w.to(torch.bfloat16) for w in weights_fp32]
     weights_fp8, weights_scale = [], []
     for w in weights_bf16:
         wq, ws = quantize_weight_per_128x128(w)
@@ -141,12 +142,13 @@ def bench_fp8_gemm():
         weights_scale.append(ws)
 
     print(f"o_proj TP=8: weight [{N}, {K}], CUDA graph replay x{NUM_INPUTS}")
-    print(f"{'batch':>6} | {'CK q+g(us)':>11} | {'CK gemm(us)':>12} | {'fused(us)':>10} | {'BF16(us)':>9} | {'fused/CK':>8}")
-    print("-" * 72)
+    print(f"{'batch':>6} | {'CK q+g(us)':>11} | {'CK gemm(us)':>12} | {'fused(us)':>10} | {'BF16(us)':>9} | {'FP32(us)':>9} | {'fused/CK':>8}")
+    print("-" * 85)
 
     for i, M in enumerate(BATCH_SIZES):
         # Pre-generate NUM_INPUTS different inputs
-        inputs_bf16 = [torch.randn(M, K, dtype=torch.bfloat16, device=device) for _ in range(NUM_INPUTS)]
+        inputs_fp32 = [torch.randn(M, K, dtype=torch.float32, device=device) for _ in range(NUM_INPUTS)]
+        inputs_bf16 = [x.to(torch.bfloat16) for x in inputs_fp32]
         # Pre-quantized inputs for CK gemm-only path
         inputs_fp8 = []
         for x in inputs_bf16:
@@ -196,11 +198,21 @@ def bench_fp8_gemm():
         g_bf16 = capture_graph(fn_bf16)
         t_bf16 = bench_graph(g_bf16)
 
+        # --- FP32 baseline ---
+        idx[0] = 0
+        def fn_fp32():
+            i = idx[0] % NUM_INPUTS
+            torch.mm(inputs_fp32[i], weights_fp32[i].T)
+            idx[0] += 1
+
+        g_fp32 = capture_graph(fn_fp32)
+        t_fp32 = bench_graph(g_fp32)
+
         ratio = t_ck_e2e / t_fused
-        print(f"{M:>6} | {t_ck_e2e:>11.1f} | {t_ck_gemm:>12.1f} | {t_fused:>10.1f} | {t_bf16:>9.1f} | {ratio:>7.2f}x")
+        print(f"{M:>6} | {t_ck_e2e:>11.1f} | {t_ck_gemm:>12.1f} | {t_fused:>10.1f} | {t_bf16:>9.1f} | {t_fp32:>9.1f} | {ratio:>7.2f}x")
 
         # Free graphs
-        del g_ck_e2e, g_ck_gemm, g_fused, g_bf16
+        del g_ck_e2e, g_ck_gemm, g_fused, g_bf16, g_fp32
 
 
 if __name__ == "__main__":

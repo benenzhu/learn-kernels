@@ -4,9 +4,14 @@
  * Exposes the same API as vllm's _C_custom_ar.
  */
 
-#include <ATen/cuda/Exceptions.h>
-#include <c10/cuda/CUDAGuard.h>
-#include <c10/cuda/CUDAStream.h>
+// #include <ATen/cuda/Exceptions.h>
+// #include <c10/cuda/CUDAGuard.h>
+// #include <c10/cuda/CUDAStream.h>
+// #include <torch/all.h>
+// #include <torch/extension.h>
+#include <ATen/hip/Exceptions.h>
+#include <ATen/hip/impl/HIPGuardImplMasqueradingAsCUDA.h>
+#include <ATen/hip/impl/HIPStreamMasqueradingAsCUDA.h>
 #include <torch/all.h>
 #include <torch/extension.h>
 

@@ -27,10 +27,10 @@ _extra_cflags = ["-O3"]
 _extra_cuda_cflags = ["-O3", "-std=c++17"]
 
 if torch.version.hip:
-    _extra_cuda_cflags += ["-DUSE_ROCM", "-U__CUDA_NO_HALF_CONVERSIONS__"]
+    _extra_cuda_cflags += ["-DUSE_ROCM", "-U__CUDA_NO_HALF_CONVERSIONS__", "-save-temps", "-Rpass-analysis=kernel-resource-usage"]
 
 _ops = None
-_ops_mtime = 0.0  # max mtime of sources when _ops was built
+# _ops_mtime = 0.0  # max mtime of sources when _ops was built
 
 
 def _get_src_mtime():
@@ -43,12 +43,12 @@ def _get_src_mtime():
 
 def get_ops():
     """Load the C++ extension, auto-recompile if any source file changed."""
-    global _ops, _ops_mtime
-    src_mtime = _get_src_mtime()
-    if _ops is not None and src_mtime <= _ops_mtime:
-        return _ops
-    if _ops is not None:
-        print("[custom_ar_dev] source changed, recompiling...")
+    # global _ops, _ops_mtime
+    # src_mtime = _get_src_mtime()
+    # if _ops is not None and src_mtime <= _ops_mtime:
+    #     return _ops
+    # if _ops is not None:
+    #     print("[custom_ar_dev] source changed, recompiling...")
     os.makedirs(_BUILD_DIR, exist_ok=True)
     _ops = load(
         name="custom_all_reduce_dev",
@@ -59,7 +59,7 @@ def get_ops():
         build_directory=_BUILD_DIR,
         verbose=True,
     )
-    _ops_mtime = src_mtime
+    # _ops_mtime = src_mtime
     return _ops
 
 
