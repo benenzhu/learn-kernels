@@ -372,7 +372,7 @@ __global__ void __launch_bounds__(512, 1)
     int stride = gridDim.x * tnum_gpu;
     __shared__ T tmp_smem[tnum_gpu * ngpus * pack_size];
     for (int idx = start + tid; idx < end; idx += stride) {
-      constexpr bool use_opt = true ;
+      constexpr bool use_opt = true;
       if constexpr(use_opt){
         auto flat_src = ptrs[warp_id] + idx;
         using Gsrc = const __uint128_t __attribute__((address_space(1)))*;
@@ -591,8 +591,8 @@ void CustomAllreduce::allreduce(hipStream_t stream, T* input, T* output,
       origin_size = size;
       origin_blocks = blocks;
       if (rank_ == 0) {
-        fprintf(stderr, "size: %d, blocks: %d, origin_size: %d\n", size, blocks,
-                origin_size);
+        fprintf(stderr, "size: %d, blocks: %d, eles: %d\n", size, blocks,
+                (size + threads - 1) / threads);
       }
     }
 
