@@ -474,7 +474,7 @@ void CustomAllreduce::allreduce(hipStream_t stream, T* input, T* output,
       effective_limit = block_limit;  // env override bypasses dynamic logic
     } else if (bytes <= 256 * 1024) {
       effective_limit = 16;
-    } else if (bytes <= 2 * 1024 * 1024) {
+    } else if (bytes <= 2 * 1024 * 1024) { 
       effective_limit = 32;
     } else {
       effective_limit = block_limit;
@@ -532,9 +532,9 @@ void CustomAllreduce::allreduce(hipStream_t stream, T* input, T* output,
   }
 
     switch (world_size_) {
-      REDUCE_CASE(2)
-      REDUCE_CASE(4)
-      REDUCE_CASE(6)
+      // REDUCE_CASE(2)
+      // REDUCE_CASE(4)
+      // REDUCE_CASE(6)
       REDUCE_CASE(8)
       default:
         throw std::runtime_error(

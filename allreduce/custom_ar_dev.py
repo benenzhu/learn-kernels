@@ -52,7 +52,10 @@ def get_ops():
     os.makedirs(_BUILD_DIR, exist_ok=True)
     _ops = load(
         name="custom_all_reduce_dev",
-        sources=[os.path.join(_CSRC_DIR, "custom_all_reduce_pybind.cu")],
+        sources=[
+            os.path.join(_CSRC_DIR, "custom_all_reduce.cu"),
+            os.path.join(_CSRC_DIR, "custom_all_reduce_pybind.cu"),
+        ],
         extra_cflags=_extra_cflags,
         extra_cuda_cflags=_extra_cuda_cflags,
         extra_include_paths=[_CSRC_DIR],
