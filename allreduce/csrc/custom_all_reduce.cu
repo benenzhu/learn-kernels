@@ -378,7 +378,7 @@ __global__ void __launch_bounds__(512, 1)
         using Gsrc = const __uint128_t __attribute__((address_space(1)))*;
         Gsrc gsrc = (Gsrc)flat_src;
         unsigned __int128 tmp;
-        asm volatile("global_load_dwordx4 %0, %1 off\n\t"
+        asm volatile("global_load_dwordx4 %0, %1 off nt\n\t"
                      "s_waitcnt vmcnt(0)\n\t"
                      : "=v"(tmp)
                      : "v"(gsrc)
