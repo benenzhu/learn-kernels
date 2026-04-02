@@ -591,7 +591,7 @@ void CustomAllreduce::allreduce(hipStream_t stream, T* input, T* output,
       origin_size = size;
       origin_blocks = blocks;
       if (rank_ == 0) {
-        fprintf(stderr, "size: %d, blocks: %d, eles: .3lf\n", size, blocks,
+        fprintf(stderr, "size: %d, blocks: %d, eles: %.3lf\n", size, blocks,
                 ((size + threads - 1) / threads) * 1.0 / blocks);
       }
     }
