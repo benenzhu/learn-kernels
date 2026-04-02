@@ -581,7 +581,7 @@ void CustomAllreduce::allreduce(hipStream_t stream, T* input, T* output,
     } else if (bytes <= 2 * 1024 * 1024) { 
       effective_limit = 64;
     } else {
-      effective_limit = block_limit;
+      effective_limit = 64;
     }
     int blocks = std::min(effective_limit, (size + threads - 1) / threads);
 #else
@@ -628,7 +628,7 @@ void CustomAllreduce::allreduce(hipStream_t stream, T* input, T* output,
         KL(ngpus, cross_device_reduce_1stage);          \
       } else if (fully_connected_) {                    \
         if ((world_size_ <= 4 && bytes < 512 * 1024) || \
-            (world_size_ <= 8 && bytes < 256 * 1024)) { \
+            (world_size_ <= 8 && bytes < 128 * 1024)) { \
           KL(ngpus, cross_device_reduce_1stage);        \
         } else {                                        \
           KL(ngpus, cross_device_reduce_2stage);        \
