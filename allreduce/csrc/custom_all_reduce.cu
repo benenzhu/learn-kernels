@@ -372,13 +372,13 @@ __global__ void __launch_bounds__(512, 1)
     int stride = gridDim.x * tnum_gpu;
     __shared__ T tmp_smem[tnum_gpu * ngpus * pack_size];
     for (int idx = start + tid; idx < end; idx += stride) {
-      constexpr bool use_opt = false;
+      constexpr bool use_opt = true ;
       if constexpr(use_opt){
         auto flat_src = ptrs[warp_id] + idx;
         using Gsrc = const __uint128_t __attribute__((address_space(1)))*;
         Gsrc gsrc = (Gsrc)flat_src;
         unsigned __int128 tmp;
-        asm volatile("global_load_dwordx4 %0, %1 off nt\n\t"
+        asm volatile("global_load_dwordx4 %0, %1 off\n\t"
                      "s_waitcnt vmcnt(0)\n\t"
                      : "=v"(tmp)
                      : "v"(gsrc)
