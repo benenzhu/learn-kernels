@@ -372,7 +372,7 @@ __global__ void __launch_bounds__(512, 1)
     int stride = gridDim.x * tnum_gpu;
     __shared__ T tmp_smem[tnum_gpu * ngpus * pack_size];
     for (int idx = start + tid; idx < end; idx += stride) {
-      constexpr bool use_opt = true;
+      constexpr bool use_opt = false;
       if constexpr(use_opt){
         auto flat_src = ptrs[warp_id] + idx;
         using Gsrc = const __uint128_t __attribute__((address_space(1)))*;
