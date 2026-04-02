@@ -24,10 +24,11 @@ _CSRC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "csrc")
 _BUILD_DIR = os.path.join(_CSRC_DIR, "build")
 
 _extra_cflags = ["-O3"]
-_extra_cuda_cflags = ["-O3", "-std=c++17"]
+_extra_cuda_cflags = ["-O3", "-std=c++17", "-g"]
 
 if torch.version.hip:
-    _extra_cuda_cflags += ["-DUSE_ROCM", "-U__CUDA_NO_HALF_CONVERSIONS__", "-save-temps", "-Rpass-analysis=kernel-resource-usage"]
+    _extra_cuda_cflags += ["-DUSE_ROCM", "-U__CUDA_NO_HALF_CONVERSIONS__", "-save-temps"]
+                        #    "-Rpass-analysis=kernel-resource-usage"]
 
 _ops = None
 # _ops_mtime = 0.0  # max mtime of sources when _ops was built

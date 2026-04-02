@@ -313,6 +313,24 @@ DINLINE void nt_store_global(P* p, const P& val) {
   u.in = val;
   __builtin_nontemporal_store(u.f, reinterpret_cast<nt_vec16*>(p));
 }
+
+// Perf experiment: force global_load_dwordx4 (flat ptr cast to AS1) instead of
+// compiler flat_load for peer buffer -> smem 16B chunk. Modifier matches
+// rocPrim ROCPRIM_ATOMIC_LOAD_GLOBAL on CDNA3 ("off sc1").
+template <typename P>
+DINLINE void smem_store_p_from_peer_global_asm(P* smem_slot, const P* flat_src) {
+  static_assert(sizeof(P) == 16, "packed P is 16B");
+  using Gsrc = const __uint128_t __attribute__((address_space(1)))*;
+  // Addrspacecast: Clang rejects __builtin_astype(..., Gsrc) in C++; C-cast works.
+  Gsrc gsrc = (Gsrc)flat_src;
+  __uint128_t w;
+  asm volatile("global_load_dwordx4 %0, %1 off sc1\n\t"
+               "s_waitcnt vmcnt(0)\n\t"
+               : "=v"(w)
+               : "v"(gsrc)
+               : "memory");
+  __builtin_memcpy(static_cast<void*>(smem_slot), &w, 16);
+}
 #else
 template <typename P>
 DINLINE P nt_load_global(const P* p) {
@@ -354,8 +372,21 @@ __global__ void __launch_bounds__(512, 1)
     int stride = gridDim.x * tnum_gpu;
     __shared__ T tmp_smem[tnum_gpu * ngpus * pack_size];
     for (int idx = start + tid; idx < end; idx += stride) {
-      *(reinterpret_cast<P*>(&tmp_smem[0]) + threadIdx.x) =
-          nt_load_global(ptrs[warp_id] + idx);
+      constexpr bool use_opt = true;
+      if constexpr(use_opt){
+        auto flat_src = ptrs[warp_id] + idx;
+        using Gsrc = const __uint128_t __attribute__((address_space(1)))*;
+        Gsrc gsrc = (Gsrc)flat_src;
+        unsigned __int128 tmp;
+        asm volatile("global_load_dwordx4 %0, %1 off\n\t"
+                     "s_waitcnt vmcnt(0)\n\t"
+                     : "=v"(tmp)
+                     : "v"(gsrc)
+                     : "memory");
+        *(reinterpret_cast<P*>(&tmp_smem[0]) + threadIdx.x) = *(reinterpret_cast<P*>(&tmp));
+      }else{
+        *(reinterpret_cast<P*>(&tmp_smem[0]) + threadIdx.x) = ptrs[warp_id][idx];
+      }
       __syncthreads();
       if (warp_id == 0) {
         A add_reg;
@@ -380,7 +411,7 @@ __global__ void __launch_bounds__(512, 1)
     barrier_at_end<ngpus>(sg, self_sg, rank);
     for (int idx = tid; idx < largest_part; idx += stride) {
       int dst_idx = (warp_id + rank) % ngpus * part + idx;
-      nt_store_global(((P*)result) + dst_idx, nt_load_global(tmps[warp_id] + idx));
+      ((P*)result)[dst_idx] = tmps[warp_id][idx];
     }
   } else {
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
@@ -548,7 +579,7 @@ void CustomAllreduce::allreduce(hipStream_t stream, T* input, T* output,
     } else if (bytes <= 256 * 1024) {
       effective_limit = 16;
     } else if (bytes <= 2 * 1024 * 1024) { 
-      effective_limit = 32;
+      effective_limit = 64;
     } else {
       effective_limit = block_limit;
     }
@@ -559,10 +590,10 @@ void CustomAllreduce::allreduce(hipStream_t stream, T* input, T* output,
     if (size != origin_size || blocks != origin_blocks) {
       origin_size = size;
       origin_blocks = blocks;
-      // if (rank_ == 0) {
-      //   fprintf(stderr, "size: %d, blocks: %d, origin_size: %d\n", size, blocks,
-      //           origin_size);
-      // }
+      if (rank_ == 0) {
+        fprintf(stderr, "size: %d, blocks: %d, origin_size: %d\n", size, blocks,
+                origin_size);
+      }
     }
 
     // Check environment variable once
