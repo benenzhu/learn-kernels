@@ -60,6 +60,11 @@ DINLINE half downcast_s(float val) {
   return __float2half(val);
 }
 
+template <>
+DINLINE float downcast_s(float val) {
+  return val;
+}
+
 // scalar add functions
 // for some reason when compiling with Pytorch, the + operator for half and
 // bfloat is disabled so we call the intrinsics directly
@@ -68,6 +73,8 @@ DINLINE half& assign_add(half& a, half b) {
   return a;
 }
 DINLINE float& assign_add(float& a, float b) { return a += b; }
+
+DINLINE float upcast_s(float val) { return val; }
 
 #if (__CUDA_ARCH__ >= 800 || !defined(__CUDA_ARCH__))
 DINLINE float upcast_s(nv_bfloat16 val) { return __bfloat162float(val); }
@@ -282,14 +289,48 @@ DINLINE P* get_tmp_buf(Signal* sg) {
   return (P*)(((Signal*)sg) + 1);
 }
 
+// Non-temporal global traffic (ROCm); P is always 16B packed vec in this file.
+// Use Clang vector (not HIP's float4 typedef) — builtins reject HIP_vector_type.
+#if defined(USE_ROCM)
+using nt_vec16 = __attribute__((__vector_size__(16))) float;
+template <typename P>
+DINLINE P nt_load_global(const P* p) {
+  static_assert(sizeof(P) == 16 && sizeof(nt_vec16) == 16, "nt_load: 16B P");
+  union {
+    nt_vec16 f;
+    P out;
+  } u;
+  u.f = __builtin_nontemporal_load(reinterpret_cast<const nt_vec16*>(p));
+  return u.out;
+}
+template <typename P>
+DINLINE void nt_store_global(P* p, const P& val) {
+  static_assert(sizeof(P) == 16 && sizeof(nt_vec16) == 16, "nt_store: 16B P");
+  union {
+    nt_vec16 f;
+    P in;
+  } u;
+  u.in = val;
+  __builtin_nontemporal_store(u.f, reinterpret_cast<nt_vec16*>(p));
+}
+#else
+template <typename P>
+DINLINE P nt_load_global(const P* p) {
+  return *p;
+}
+template <typename P>
+DINLINE void nt_store_global(P* p, const P& val) {
+  *p = val;
+}
+#endif
+
 template <typename T, int ngpus>
 __global__ void __launch_bounds__(512, 1)
     cross_device_reduce_2stage(RankData* _dp, RankSignals sg, Signal* self_sg,
                                T* __restrict__ result, int rank, int size) {
-  int tid = blockIdx.x * blockDim.x + threadIdx.x;
-  int stride = gridDim.x * blockDim.x;
   using P = typename packed_t<T>::P;
   using A = typename packed_t<T>::A;
+  constexpr int pack_size = P::size;
   int part = size / ngpus;
   int start = rank * part;
   int end = rank == ngpus - 1 ? size : start + part;
@@ -305,25 +346,57 @@ __global__ void __launch_bounds__(512, 1)
   auto tmp_out = tmps[0];
   barrier_at_start<ngpus>(sg, self_sg, rank);
 
-  // stage 1: reduce scatter
-  for (int idx = start + tid; idx < end; idx += stride) {
-    tmp_out[idx - start] = packed_reduce<P, ngpus, A>(ptrs, idx);
-  }
-  barrier_at_end<ngpus>(sg, self_sg, rank);
-
-  // stage 2: allgather. Note: it's important to match the tid between
-  // the two stages, because visibility across devices is only guaranteed
-  // between threads that have the same tid. If thread i computes the sum of
-  // start + i in the first stage, then thread i also gathers start + i from
-  // all ranks.
-
-  for (int idx = tid; idx < largest_part; idx += stride) {
+  if constexpr (512 % ngpus == 0) {
+    constexpr int tnum_gpu = 512 / ngpus;
+    int warp_id = threadIdx.x / tnum_gpu;
+    int lane_id = threadIdx.x % tnum_gpu;
+    int tid = blockIdx.x * tnum_gpu + lane_id;
+    int stride = gridDim.x * tnum_gpu;
+    __shared__ T tmp_smem[tnum_gpu * ngpus * pack_size];
+    for (int idx = start + tid; idx < end; idx += stride) {
+      *(reinterpret_cast<P*>(&tmp_smem[0]) + threadIdx.x) =
+          nt_load_global(ptrs[warp_id] + idx);
+      __syncthreads();
+      if (warp_id == 0) {
+        A add_reg;
 #pragma unroll
-    for (int i = 0; i < ngpus; i++) {
-      int gather_from_rank = ((rank + i) % ngpus);
-      if (gather_from_rank == ngpus - 1 || idx < part) {
-        int dst_idx = gather_from_rank * part + idx;
-        ((P*)result)[dst_idx] = tmps[i][idx];
+        for (int i = 0; i < pack_size; ++i)
+          add_reg.data[i] = upcast_s(tmp_smem[pack_size * threadIdx.x + i]);
+        constexpr int smem_gpu_loop_stride = tnum_gpu * pack_size;
+#pragma unroll
+        for (int i = 1; i < ngpus; ++i)
+#pragma unroll
+          for (int j = 0; j < pack_size; ++j)
+            add_reg.data[j] += upcast_s(
+                tmp_smem[i * smem_gpu_loop_stride + pack_size * threadIdx.x + j]);
+        P write_reg;
+#pragma unroll
+        for (int i = 0; i < pack_size; ++i)
+          write_reg.data[i] = downcast_s<T>(add_reg.data[i]);
+        tmp_out[idx - start] = write_reg;
+      }
+      __syncthreads();
+    }
+    barrier_at_end<ngpus>(sg, self_sg, rank);
+    for (int idx = tid; idx < largest_part; idx += stride) {
+      int dst_idx = (warp_id + rank) % ngpus * part + idx;
+      nt_store_global(((P*)result) + dst_idx, nt_load_global(tmps[warp_id] + idx));
+    }
+  } else {
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    int stride = gridDim.x * blockDim.x;
+    for (int idx = start + tid; idx < end; idx += stride) {
+      tmp_out[idx - start] = packed_reduce<P, ngpus, A>(ptrs, idx);
+    }
+    barrier_at_end<ngpus>(sg, self_sg, rank);
+    for (int idx = tid; idx < largest_part; idx += stride) {
+#pragma unroll
+      for (int i = 0; i < ngpus; i++) {
+        int gather_from_rank = ((rank + i) % ngpus);
+        if (gather_from_rank == ngpus - 1 || idx < part) {
+          int dst_idx = gather_from_rank * part + idx;
+          nt_store_global(((P*)result) + dst_idx, nt_load_global(tmps[i] + idx));
+        }
       }
     }
   }
