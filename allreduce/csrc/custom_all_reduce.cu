@@ -628,7 +628,7 @@ void CustomAllreduce::allreduce(hipStream_t stream, T* input, T* output,
         KL(ngpus, cross_device_reduce_1stage);          \
       } else if (fully_connected_) {                    \
         if ((world_size_ <= 4 && bytes < 512 * 1024) || \
-            (world_size_ <= 8 && bytes < 128 * 1024)) { \
+            (world_size_ <= 8 && bytes <= 64 * 1024)) { \
           KL(ngpus, cross_device_reduce_1stage);        \
         } else {                                        \
           KL(ngpus, cross_device_reduce_2stage);        \
