@@ -639,9 +639,9 @@ void CustomAllreduce::allreduce(hipStream_t stream, T* input, T* output,
   }
 
     switch (world_size_) {
-      // REDUCE_CASE(2)
-      // REDUCE_CASE(4)
-      // REDUCE_CASE(6)
+      REDUCE_CASE(2)
+      REDUCE_CASE(4)
+      REDUCE_CASE(6)
       REDUCE_CASE(8)
       default:
         throw std::runtime_error(

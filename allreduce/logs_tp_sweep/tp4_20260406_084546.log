@@ -1,0 +1,607 @@
+W0406 08:46:12.767000 1816891 torch/distributed/run.py:803] 
+W0406 08:46:12.767000 1816891 torch/distributed/run.py:803] *****************************************
+W0406 08:46:12.767000 1816891 torch/distributed/run.py:803] Setting OMP_NUM_THREADS environment variable for each process to be 1 in default, to avoid your system being overloaded, please further tune the variable for optimal performance in your application as needed. 
+W0406 08:46:12.767000 1816891 torch/distributed/run.py:803] *****************************************
+[Gloo] Rank 0 is connected to 3 peer ranks. Expected number of connected peer ranks is : 3
+[Gloo] Rank 1 is connected to 3 peer ranks. Expected number of connected peer ranks is : 3
+[Gloo] Rank 3 is connected to [Gloo] Rank 3 peer ranks. Expected number of connected peer ranks is : 23 is connected to 3
+ peer ranks. Expected number of connected peer ranks is : 3
+[Gloo] Rank 0 is connected to 3 peer ranks. Expected number of connected peer ranks is : 3
+[Gloo] Rank 1 is connected to 3 peer ranks. Expected number of connected peer ranks is : 3
+[Gloo] Rank 2 is connected to 3 peer ranks. Expected number of connected peer ranks is : 3
+[Gloo] Rank 3 is connected to 3 peer ranks. Expected number of connected peer ranks is : 3
+[aiter] import [module_aiter_enum] under /usr/local/lib/python3.12/dist-packages/aiter/jit/module_aiter_enum.so
+[aiter] import [module_aiter_enum] under /usr/local/lib/python3.12/dist-packages/aiter/jit/module_aiter_enum.so
+[aiter] import [module_aiter_enum] under /usr/local/lib/python3.12/dist-packages/aiter/jit/module_aiter_enum.so
+[aiter] import [module_aiter_enum] under /usr/local/lib/python3.12/dist-packages/aiter/jit/module_aiter_enum.so
+[aiter] import [module_custom_all_reduce] under /usr/local/lib/python3.12/dist-packages/aiter/jit/module_custom_all_reduce.so
+[aiter] import [module_custom_all_reduce] under /usr/local/lib/python3.12/dist-packages/aiter/jit/module_custom_all_reduce.so
+[aiter] import [module_custom_all_reduce] under /usr/local/lib/python3.12/dist-packages/aiter/jit/module_custom_all_reduce.so
+[aiter] import [module_custom_all_reduce] under /usr/local/lib/python3.12/dist-packages/aiter/jit/module_custom_all_reduce.so
+/root/bench_kernels/allreduce/csrc/custom_all_reduce.cuh -> /root/bench_kernels/allreduce/csrc/custom_all_reduce.cuh [skipped, no changes]
+/root/bench_kernels/allreduce/csrc/custom_all_reduce.cu -> /root/bench_kernels/allreduce/csrc/custom_all_reduce.hip [skipped, already hipified]
+/root/bench_kernels/allreduce/csrc/custom_all_reduce_pybind.cu -> /root/bench_kernels/allreduce/csrc/custom_all_reduce_pybind.hip [skipped, already hipified]
+/root/bench_kernels/allreduce/csrc/custom_all_reduce.cuh -> /root/bench_kernels/allreduce/csrc/custom_all_reduce.cuh [skipped, no changes]
+[92mSuccessfully preprocessed all matching files.[0m
+Total number of unsupported CUDA function calls: 0
+
+
+Total number of replaced kernel launches: 0
+ninja: no work to do.
+aiter: OK, vllm: OK, dev: OK
+
+Verifying correctness (50 rounds × 3 sizes × 2 dtypes)...
+byts: 512, size: 32, blocks: 1, eles: 1.000
+byts: 256, size: 16, blocks: 1, eles: 1.000
+byts: 16384, size: 1024, blocks: 2, eles: 1.000
+byts: 8192, size: 512, blocks: 1, eles: 1.000
+byts: 2097152, size: 131072, blocks: 64, eles: 4.000
+byts: 1048576, size: 65536, blocks: 64, eles: 2.000
+byts: 512, size: 32, blocks: 1, eles: 1.000
+byts: 256, size: 16, blocks: 1, eles: 1.000
+byts: 16384, size: 1024, blocks: 2, eles: 1.000
+byts: 8192, size: 512, blocks: 1, eles: 1.000
+byts: 2097152, size: 131072, blocks: 64, eles: 4.000
+byts: 1048576, size: 65536, blocks: 64, eles: 2.000
+byts: 512, size: 32, blocks: 1, eles: 1.000
+byts: 256, size: 16, blocks: 1, eles: 1.000
+byts: 16384, size: 1024, blocks: 2, eles: 1.000
+byts: 8192, size: 512, blocks: 1, eles: 1.000
+byts: 2097152, size: 131072, blocks: 64, eles: 4.000
+byts: 1048576, size: 65536, blocks: 64, eles: 2.000
+byts: 512, size: 32, blocks: 1, eles: 1.000
+byts: 256, size: 16, blocks: 1, eles: 1.000
+byts: 16384, size: 1024, blocks: 2, eles: 1.000
+byts: 8192, size: 512, blocks: 1, eles: 1.000
+byts: 2097152, size: 131072, blocks: 64, eles: 4.000
+byts: 1048576, size: 65536, blocks: 64, eles: 2.000
+byts: 512, size: 32, blocks: 1, eles: 1.000
+byts: 256, size: 16, blocks: 1, eles: 1.000
+byts: 16384, size: 1024, blocks: 2, eles: 1.000
+byts: 8192, size: 512, blocks: 1, eles: 1.000
+byts: 2097152, size: 131072, blocks: 64, eles: 4.000
+byts: 1048576, size: 65536, blocks: 64, eles: 2.000
+byts: 512, size: 32, blocks: 1, eles: 1.000
+byts: 256, size: 16, blocks: 1, eles: 1.000
+byts: 16384, size: 1024, blocks: 2, eles: 1.000
+byts: 8192, size: 512, blocks: 1, eles: 1.000
+byts: 2097152, size: 131072, blocks: 64, eles: 4.000
+byts: 1048576, size: 65536, blocks: 64, eles: 2.000
+byts: 512, size: 32, blocks: 1, eles: 1.000
+byts: 256, size: 16, blocks: 1, eles: 1.000
+byts: 16384, size: 1024, blocks: 2, eles: 1.000
+byts: 8192, size: 512, blocks: 1, eles: 1.000
+byts: 2097152, size: 131072, blocks: 64, eles: 4.000
+byts: 1048576, size: 65536, blocks: 64, eles: 2.000
+byts: 512, size: 32, blocks: 1, eles: 1.000
+byts: 256, size: 16, blocks: 1, eles: 1.000
+byts: 16384, size: 1024, blocks: 2, eles: 1.000
+byts: 8192, size: 512, blocks: 1, eles: 1.000
+byts: 2097152, size: 131072, blocks: 64, eles: 4.000
+byts: 1048576, size: 65536, blocks: 64, eles: 2.000
+byts: 512, size: 32, blocks: 1, eles: 1.000
+byts: 256, size: 16, blocks: 1, eles: 1.000
+byts: 16384, size: 1024, blocks: 2, eles: 1.000
+byts: 8192, size: 512, blocks: 1, eles: 1.000
+byts: 2097152, size: 131072, blocks: 64, eles: 4.000
+byts: 1048576, size: 65536, blocks: 64, eles: 2.000
+byts: 512, size: 32, blocks: 1, eles: 1.000
+byts: 256, size: 16, blocks: 1, eles: 1.000
+byts: 16384, size: 1024, blocks: 2, eles: 1.000
+byts: 8192, size: 512, blocks: 1, eles: 1.000
+byts: 2097152, size: 131072, blocks: 64, eles: 4.000
+byts: 1048576, size: 65536, blocks: 64, eles: 2.000
+byts: 512, size: 32, blocks: 1, eles: 1.000
+byts: 256, size: 16, blocks: 1, eles: 1.000
+byts: 16384, size: 1024, blocks: 2, eles: 1.000
+byts: 8192, size: 512, blocks: 1, eles: 1.000
+byts: 2097152, size: 131072, blocks: 64, eles: 4.000
+byts: 1048576, size: 65536, blocks: 64, eles: 2.000
+byts: 512, size: 32, blocks: 1, eles: 1.000
+byts: 256, size: 16, blocks: 1, eles: 1.000
+byts: 16384, size: 1024, blocks: 2, eles: 1.000
+byts: 8192, size: 512, blocks: 1, eles: 1.000
+byts: 2097152, size: 131072, blocks: 64, eles: 4.000
+byts: 1048576, size: 65536, blocks: 64, eles: 2.000
+byts: 512, size: 32, blocks: 1, eles: 1.000
+byts: 256, size: 16, blocks: 1, eles: 1.000
+byts: 16384, size: 1024, blocks: 2, eles: 1.000
+byts: 8192, size: 512, blocks: 1, eles: 1.000
+byts: 2097152, size: 131072, blocks: 64, eles: 4.000
+byts: 1048576, size: 65536, blocks: 64, eles: 2.000
+byts: 512, size: 32, blocks: 1, eles: 1.000
+byts: 256, size: 16, blocks: 1, eles: 1.000
+byts: 16384, size: 1024, blocks: 2, eles: 1.000
+byts: 8192, size: 512, blocks: 1, eles: 1.000
+byts: 2097152, size: 131072, blocks: 64, eles: 4.000
+byts: 1048576, size: 65536, blocks: 64, eles: 2.000
+byts: 512, size: 32, blocks: 1, eles: 1.000
+byts: 256, size: 16, blocks: 1, eles: 1.000
+byts: 16384, size: 1024, blocks: 2, eles: 1.000
+byts: 8192, size: 512, blocks: 1, eles: 1.000
+byts: 2097152, size: 131072, blocks: 64, eles: 4.000
+byts: 1048576, size: 65536, blocks: 64, eles: 2.000
+byts: 512, size: 32, blocks: 1, eles: 1.000
+byts: 256, size: 16, blocks: 1, eles: 1.000
+byts: 16384, size: 1024, blocks: 2, eles: 1.000
+byts: 8192, size: 512, blocks: 1, eles: 1.000
+byts: 2097152, size: 131072, blocks: 64, eles: 4.000
+byts: 1048576, size: 65536, blocks: 64, eles: 2.000
+byts: 512, size: 32, blocks: 1, eles: 1.000
+byts: 256, size: 16, blocks: 1, eles: 1.000
+byts: 16384, size: 1024, blocks: 2, eles: 1.000
+byts: 8192, size: 512, blocks: 1, eles: 1.000
+byts: 2097152, size: 131072, blocks: 64, eles: 4.000
+byts: 1048576, size: 65536, blocks: 64, eles: 2.000
+byts: 512, size: 32, blocks: 1, eles: 1.000
+byts: 256, size: 16, blocks: 1, eles: 1.000
+byts: 16384, size: 1024, blocks: 2, eles: 1.000
+byts: 8192, size: 512, blocks: 1, eles: 1.000
+byts: 2097152, size: 131072, blocks: 64, eles: 4.000
+byts: 1048576, size: 65536, blocks: 64, eles: 2.000
+byts: 512, size: 32, blocks: 1, eles: 1.000
+byts: 256, size: 16, blocks: 1, eles: 1.000
+byts: 16384, size: 1024, blocks: 2, eles: 1.000
+byts: 8192, size: 512, blocks: 1, eles: 1.000
+byts: 2097152, size: 131072, blocks: 64, eles: 4.000
+byts: 1048576, size: 65536, blocks: 64, eles: 2.000
+byts: 512, size: 32, blocks: 1, eles: 1.000
+byts: 256, size: 16, blocks: 1, eles: 1.000
+byts: 16384, size: 1024, blocks: 2, eles: 1.000
+byts: 8192, size: 512, blocks: 1, eles: 1.000
+byts: 2097152, size: 131072, blocks: 64, eles: 4.000
+byts: 1048576, size: 65536, blocks: 64, eles: 2.000
+byts: 512, size: 32, blocks: 1, eles: 1.000
+byts: 256, size: 16, blocks: 1, eles: 1.000
+byts: 16384, size: 1024, blocks: 2, eles: 1.000
+byts: 8192, size: 512, blocks: 1, eles: 1.000
+byts: 2097152, size: 131072, blocks: 64, eles: 4.000
+byts: 1048576, size: 65536, blocks: 64, eles: 2.000
+byts: 512, size: 32, blocks: 1, eles: 1.000
+byts: 256, size: 16, blocks: 1, eles: 1.000
+byts: 16384, size: 1024, blocks: 2, eles: 1.000
+byts: 8192, size: 512, blocks: 1, eles: 1.000
+byts: 2097152, size: 131072, blocks: 64, eles: 4.000
+byts: 1048576, size: 65536, blocks: 64, eles: 2.000
+byts: 512, size: 32, blocks: 1, eles: 1.000
+byts: 256, size: 16, blocks: 1, eles: 1.000
+byts: 16384, size: 1024, blocks: 2, eles: 1.000
+byts: 8192, size: 512, blocks: 1, eles: 1.000
+byts: 2097152, size: 131072, blocks: 64, eles: 4.000
+byts: 1048576, size: 65536, blocks: 64, eles: 2.000
+byts: 512, size: 32, blocks: 1, eles: 1.000
+byts: 256, size: 16, blocks: 1, eles: 1.000
+byts: 16384, size: 1024, blocks: 2, eles: 1.000
+byts: 8192, size: 512, blocks: 1, eles: 1.000
+byts: 2097152, size: 131072, blocks: 64, eles: 4.000
+byts: 1048576, size: 65536, blocks: 64, eles: 2.000
+byts: 512, size: 32, blocks: 1, eles: 1.000
+byts: 256, size: 16, blocks: 1, eles: 1.000
+byts: 16384, size: 1024, blocks: 2, eles: 1.000
+byts: 8192, size: 512, blocks: 1, eles: 1.000
+byts: 2097152, size: 131072, blocks: 64, eles: 4.000
+byts: 1048576, size: 65536, blocks: 64, eles: 2.000
+byts: 512, size: 32, blocks: 1, eles: 1.000
+byts: 256, size: 16, blocks: 1, eles: 1.000
+byts: 16384, size: 1024, blocks: 2, eles: 1.000
+byts: 8192, size: 512, blocks: 1, eles: 1.000
+byts: 2097152, size: 131072, blocks: 64, eles: 4.000
+byts: 1048576, size: 65536, blocks: 64, eles: 2.000
+byts: 512, size: 32, blocks: 1, eles: 1.000
+byts: 256, size: 16, blocks: 1, eles: 1.000
+byts: 16384, size: 1024, blocks: 2, eles: 1.000
+byts: 8192, size: 512, blocks: 1, eles: 1.000
+byts: 2097152, size: 131072, blocks: 64, eles: 4.000
+byts: 1048576, size: 65536, blocks: 64, eles: 2.000
+byts: 512, size: 32, blocks: 1, eles: 1.000
+byts: 256, size: 16, blocks: 1, eles: 1.000
+byts: 16384, size: 1024, blocks: 2, eles: 1.000
+byts: 8192, size: 512, blocks: 1, eles: 1.000
+byts: 2097152, size: 131072, blocks: 64, eles: 4.000
+byts: 1048576, size: 65536, blocks: 64, eles: 2.000
+byts: 512, size: 32, blocks: 1, eles: 1.000
+byts: 256, size: 16, blocks: 1, eles: 1.000
+byts: 16384, size: 1024, blocks: 2, eles: 1.000
+byts: 8192, size: 512, blocks: 1, eles: 1.000
+byts: 2097152, size: 131072, blocks: 64, eles: 4.000
+byts: 1048576, size: 65536, blocks: 64, eles: 2.000
+byts: 512, size: 32, blocks: 1, eles: 1.000
+byts: 256, size: 16, blocks: 1, eles: 1.000
+byts: 16384, size: 1024, blocks: 2, eles: 1.000
+byts: 8192, size: 512, blocks: 1, eles: 1.000
+byts: 2097152, size: 131072, blocks: 64, eles: 4.000
+byts: 1048576, size: 65536, blocks: 64, eles: 2.000
+byts: 512, size: 32, blocks: 1, eles: 1.000
+byts: 256, size: 16, blocks: 1, eles: 1.000
+byts: 16384, size: 1024, blocks: 2, eles: 1.000
+byts: 8192, size: 512, blocks: 1, eles: 1.000
+byts: 2097152, size: 131072, blocks: 64, eles: 4.000
+byts: 1048576, size: 65536, blocks: 64, eles: 2.000
+byts: 512, size: 32, blocks: 1, eles: 1.000
+byts: 256, size: 16, blocks: 1, eles: 1.000
+byts: 16384, size: 1024, blocks: 2, eles: 1.000
+byts: 8192, size: 512, blocks: 1, eles: 1.000
+byts: 2097152, size: 131072, blocks: 64, eles: 4.000
+byts: 1048576, size: 65536, blocks: 64, eles: 2.000
+byts: 512, size: 32, blocks: 1, eles: 1.000
+byts: 256, size: 16, blocks: 1, eles: 1.000
+byts: 16384, size: 1024, blocks: 2, eles: 1.000
+byts: 8192, size: 512, blocks: 1, eles: 1.000
+byts: 2097152, size: 131072, blocks: 64, eles: 4.000
+byts: 1048576, size: 65536, blocks: 64, eles: 2.000
+byts: 512, size: 32, blocks: 1, eles: 1.000
+byts: 256, size: 16, blocks: 1, eles: 1.000
+byts: 16384, size: 1024, blocks: 2, eles: 1.000
+byts: 8192, size: 512, blocks: 1, eles: 1.000
+byts: 2097152, size: 131072, blocks: 64, eles: 4.000
+byts: 1048576, size: 65536, blocks: 64, eles: 2.000
+byts: 512, size: 32, blocks: 1, eles: 1.000
+byts: 256, size: 16, blocks: 1, eles: 1.000
+byts: 16384, size: 1024, blocks: 2, eles: 1.000
+byts: 8192, size: 512, blocks: 1, eles: 1.000
+byts: 2097152, size: 131072, blocks: 64, eles: 4.000
+byts: 1048576, size: 65536, blocks: 64, eles: 2.000
+byts: 512, size: 32, blocks: 1, eles: 1.000
+byts: 256, size: 16, blocks: 1, eles: 1.000
+byts: 16384, size: 1024, blocks: 2, eles: 1.000
+byts: 8192, size: 512, blocks: 1, eles: 1.000
+byts: 2097152, size: 131072, blocks: 64, eles: 4.000
+byts: 1048576, size: 65536, blocks: 64, eles: 2.000
+byts: 512, size: 32, blocks: 1, eles: 1.000
+byts: 256, size: 16, blocks: 1, eles: 1.000
+byts: 16384, size: 1024, blocks: 2, eles: 1.000
+byts: 8192, size: 512, blocks: 1, eles: 1.000
+byts: 2097152, size: 131072, blocks: 64, eles: 4.000
+byts: 1048576, size: 65536, blocks: 64, eles: 2.000
+byts: 512, size: 32, blocks: 1, eles: 1.000
+byts: 256, size: 16, blocks: 1, eles: 1.000
+byts: 16384, size: 1024, blocks: 2, eles: 1.000
+byts: 8192, size: 512, blocks: 1, eles: 1.000
+byts: 2097152, size: 131072, blocks: 64, eles: 4.000
+byts: 1048576, size: 65536, blocks: 64, eles: 2.000
+byts: 512, size: 32, blocks: 1, eles: 1.000
+byts: 256, size: 16, blocks: 1, eles: 1.000
+byts: 16384, size: 1024, blocks: 2, eles: 1.000
+byts: 8192, size: 512, blocks: 1, eles: 1.000
+byts: 2097152, size: 131072, blocks: 64, eles: 4.000
+byts: 1048576, size: 65536, blocks: 64, eles: 2.000
+byts: 512, size: 32, blocks: 1, eles: 1.000
+byts: 256, size: 16, blocks: 1, eles: 1.000
+byts: 16384, size: 1024, blocks: 2, eles: 1.000
+byts: 8192, size: 512, blocks: 1, eles: 1.000
+byts: 2097152, size: 131072, blocks: 64, eles: 4.000
+byts: 1048576, size: 65536, blocks: 64, eles: 2.000
+byts: 512, size: 32, blocks: 1, eles: 1.000
+byts: 256, size: 16, blocks: 1, eles: 1.000
+byts: 16384, size: 1024, blocks: 2, eles: 1.000
+byts: 8192, size: 512, blocks: 1, eles: 1.000
+byts: 2097152, size: 131072, blocks: 64, eles: 4.000
+byts: 1048576, size: 65536, blocks: 64, eles: 2.000
+byts: 512, size: 32, blocks: 1, eles: 1.000
+byts: 256, size: 16, blocks: 1, eles: 1.000
+byts: 16384, size: 1024, blocks: 2, eles: 1.000
+byts: 8192, size: 512, blocks: 1, eles: 1.000
+byts: 2097152, size: 131072, blocks: 64, eles: 4.000
+byts: 1048576, size: 65536, blocks: 64, eles: 2.000
+byts: 512, size: 32, blocks: 1, eles: 1.000
+byts: 256, size: 16, blocks: 1, eles: 1.000
+byts: 16384, size: 1024, blocks: 2, eles: 1.000
+byts: 8192, size: 512, blocks: 1, eles: 1.000
+byts: 2097152, size: 131072, blocks: 64, eles: 4.000
+byts: 1048576, size: 65536, blocks: 64, eles: 2.000
+byts: 512, size: 32, blocks: 1, eles: 1.000
+byts: 256, size: 16, blocks: 1, eles: 1.000
+byts: 16384, size: 1024, blocks: 2, eles: 1.000
+byts: 8192, size: 512, blocks: 1, eles: 1.000
+byts: 2097152, size: 131072, blocks: 64, eles: 4.000
+byts: 1048576, size: 65536, blocks: 64, eles: 2.000
+byts: 512, size: 32, blocks: 1, eles: 1.000
+byts: 256, size: 16, blocks: 1, eles: 1.000
+byts: 16384, size: 1024, blocks: 2, eles: 1.000
+byts: 8192, size: 512, blocks: 1, eles: 1.000
+byts: 2097152, size: 131072, blocks: 64, eles: 4.000
+byts: 1048576, size: 65536, blocks: 64, eles: 2.000
+byts: 512, size: 32, blocks: 1, eles: 1.000
+byts: 256, size: 16, blocks: 1, eles: 1.000
+byts: 16384, size: 1024, blocks: 2, eles: 1.000
+byts: 8192, size: 512, blocks: 1, eles: 1.000
+byts: 2097152, size: 131072, blocks: 64, eles: 4.000
+byts: 1048576, size: 65536, blocks: 64, eles: 2.000
+byts: 512, size: 32, blocks: 1, eles: 1.000
+byts: 256, size: 16, blocks: 1, eles: 1.000
+byts: 16384, size: 1024, blocks: 2, eles: 1.000
+byts: 8192, size: 512, blocks: 1, eles: 1.000
+byts: 2097152, size: 131072, blocks: 64, eles: 4.000
+byts: 1048576, size: 65536, blocks: 64, eles: 2.000
+byts: 512, size: 32, blocks: 1, eles: 1.000
+byts: 256, size: 16, blocks: 1, eles: 1.000
+byts: 16384, size: 1024, blocks: 2, eles: 1.000
+byts: 8192, size: 512, blocks: 1, eles: 1.000
+byts: 2097152, size: 131072, blocks: 64, eles: 4.000
+byts: 1048576, size: 65536, blocks: 64, eles: 2.000
+byts: 512, size: 32, blocks: 1, eles: 1.000
+byts: 256, size: 16, blocks: 1, eles: 1.000
+byts: 16384, size: 1024, blocks: 2, eles: 1.000
+byts: 8192, size: 512, blocks: 1, eles: 1.000
+byts: 2097152, size: 131072, blocks: 64, eles: 4.000
+byts: 1048576, size: 65536, blocks: 64, eles: 2.000
+byts: 512, size: 32, blocks: 1, eles: 1.000
+byts: 256, size: 16, blocks: 1, eles: 1.000
+byts: 16384, size: 1024, blocks: 2, eles: 1.000
+byts: 8192, size: 512, blocks: 1, eles: 1.000
+byts: 2097152, size: 131072, blocks: 64, eles: 4.000
+byts: 1048576, size: 65536, blocks: 64, eles: 2.000
+All verified OK (1200 checks passed).
+
+====================================================================================================
+Pattern: f32 | dtype=torch.float32 | shape=(tokens, 2)
+====================================================================================================
+  tokens            shape     size   aiter/us   aiter/bw       vllm_1s/us vllm_1s/bw       vllm_2s/us vllm_2s/bw           dev/us     dev/bw      
+--------------------------------------------------------------------------------------------------------------------------------------------------
+INFO 04-06 08:46:47 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:47 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:47 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:47 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:47 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:47 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:47 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:47 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+byts: 32, size: 2, blocks: 1, eles: 1.000
+       4           (4, 2)      32B       4.1u       0.0G     *       4.3u       0.0G   95%       4.9u       0.0G   83%       4.1u       0.0G  100%
+INFO 04-06 08:46:48 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:48 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:48 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:48 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:48 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:48 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:48 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:48 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+byts: 64, size: 4, blocks: 1, eles: 1.000
+       8           (8, 2)      64B       4.1u       0.0G   99%       4.1u       0.0G     *       4.9u       0.0G   83%       4.1u       0.0G   99%
+INFO 04-06 08:46:48 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:48 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:48 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:48 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:48 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:48 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:48 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:48 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+byts: 128, size: 8, blocks: 1, eles: 1.000
+      16          (16, 2)     128B       4.1u       0.0G   99%       4.1u       0.0G     *       4.9u       0.0G   83%       4.1u       0.0G  100%
+INFO 04-06 08:46:49 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:49 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:49 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:49 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:49 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:49 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:49 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:49 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+byts: 256, size: 16, blocks: 1, eles: 1.000
+      32          (32, 2)     256B       4.2u       0.1G   98%       4.1u       0.1G   99%       4.9u       0.1G   83%       4.1u       0.1G     *
+INFO 04-06 08:46:49 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:49 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:49 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:49 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:49 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:49 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:49 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:49 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+byts: 512, size: 32, blocks: 1, eles: 1.000
+      64          (64, 2)     512B       4.2u       0.2G   98%       4.1u       0.2G  100%       4.9u       0.2G   83%       4.1u       0.2G     *
+INFO 04-06 08:46:50 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:50 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:50 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:50 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:50 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:50 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:50 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:50 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+byts: 1024, size: 64, blocks: 1, eles: 1.000
+     128         (128, 2)     1.0K       4.2u       0.4G   98%       4.2u       0.4G   99%       4.9u       0.3G   84%       4.1u       0.4G     *
+INFO 04-06 08:46:50 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:50 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:50 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:50 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:50 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:50 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:50 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:50 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+byts: 2048, size: 128, blocks: 1, eles: 1.000
+     256         (256, 2)     2.0K       4.2u       0.7G   98%       4.2u       0.7G   99%       4.9u       0.6G   84%       4.1u       0.7G     *
+INFO 04-06 08:46:51 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:51 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:51 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:51 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:51 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:51 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:51 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:51 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+byts: 4096, size: 256, blocks: 1, eles: 1.000
+     512         (512, 2)     4.0K       4.4u       1.4G   96%       4.2u       1.4G  100%       5.0u       1.2G   85%       4.2u       1.5G     *
+INFO 04-06 08:46:51 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:51 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:51 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:51 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:51 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:51 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:51 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:51 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+byts: 8192, size: 512, blocks: 1, eles: 1.000
+    1024        (1024, 2)     8.0K       4.7u       2.6G     *       4.7u       2.6G   99%       5.0u       2.4G   93%       4.7u       2.6G   99%
+INFO 04-06 08:46:52 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:52 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:52 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:52 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:52 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:52 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:52 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:52 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+byts: 16384, size: 1024, blocks: 2, eles: 1.000
+    2048        (2048, 2)    16.0K       5.0u       4.9G   97%       5.0u       5.0G   98%       5.4u       4.6G   91%       4.9u       5.0G     *
+INFO 04-06 08:46:52 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:52 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:52 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:52 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:52 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:52 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:52 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:52 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+byts: 32768, size: 2048, blocks: 4, eles: 1.000
+    4096        (4096, 2)    32.0K       5.7u       8.6G   91%       5.2u       9.4G  100%       5.5u       8.9G   94%       5.2u       9.5G     *
+INFO 04-06 08:46:53 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:53 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:53 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:53 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:53 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:53 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:53 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:53 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+byts: 65536, size: 4096, blocks: 8, eles: 1.000
+    8192        (8192, 2)    64.0K       7.6u      13.0G   75%       5.7u      17.2G   99%       5.7u      17.4G     *       5.7u      17.2G   99%
+INFO 04-06 08:46:53 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:53 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:53 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:53 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:54 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:54 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:54 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:54 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+byts: 131072, size: 8192, blocks: 16, eles: 1.000
+   16384       (16384, 2)   128.0K       8.9u      22.2G   66%       6.8u      29.0G   87%       5.9u      33.5G     *       6.9u      28.7G   86%
+
+====================================================================================================
+Pattern: bf16 | dtype=torch.bfloat16 | shape=(tokens, 3072)
+====================================================================================================
+  tokens            shape     size   aiter/us   aiter/bw       vllm_1s/us vllm_1s/bw       vllm_2s/us vllm_2s/bw           dev/us     dev/bw      
+--------------------------------------------------------------------------------------------------------------------------------------------------
+INFO 04-06 08:46:54 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:54 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:54 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:54 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:54 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:54 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:54 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:54 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+byts: 24576, size: 1536, blocks: 3, eles: 1.000
+       4        (4, 3072)    24.0K       5.3u       7.0G   96%       5.2u       7.1G   98%       5.5u       6.6G   91%       5.1u       7.3G     *
+INFO 04-06 08:46:54 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:54 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:54 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:54 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:54 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:54 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:54 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:54 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+byts: 49152, size: 3072, blocks: 6, eles: 1.000
+       8        (8, 3072)    48.0K       6.5u      11.3G   84%       5.5u      13.3G   99%       5.7u      12.9G   96%       5.5u      13.5G     *
+INFO 04-06 08:46:55 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:55 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:55 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:55 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:55 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:55 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:55 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:55 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+byts: 98304, size: 6144, blocks: 12, eles: 1.000
+      16       (16, 3072)    96.0K       7.9u      18.6G   74%       6.3u      23.2G   93%       5.9u      25.1G     *       6.4u      23.1G   92%
+INFO 04-06 08:46:55 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:55 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:55 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:55 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:55 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:55 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:55 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:55 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+byts: 196608, size: 12288, blocks: 16, eles: 1.500
+      32       (32, 3072)   192.0K       6.5u      45.6G     *       8.1u      36.5G   80%       7.4u      39.9G   88%       8.1u      36.6G   80%
+INFO 04-06 08:46:56 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:56 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:56 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:56 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:56 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:56 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:56 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:56 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+byts: 393216, size: 24576, blocks: 48, eles: 1.000
+      64       (64, 3072)   384.0K       8.0u      74.1G   98%      11.5u      51.5G   68%       7.8u      75.7G     *      11.4u      51.6G   68%
+INFO 04-06 08:46:57 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:57 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:57 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:57 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:57 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:57 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:57 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:57 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+byts: 786432, size: 49152, blocks: 64, eles: 1.500
+     128      (128, 3072)   768.0K      11.8u      99.9G   92%      18.4u      64.0G   59%      10.9u     108.2G     *      11.1u     106.4G   98%
+INFO 04-06 08:46:57 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:57 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:57 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:57 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:57 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:57 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:57 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:57 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+byts: 1572864, size: 98304, blocks: 64, eles: 3.000
+     256      (256, 3072)     1.5M      18.2u     129.6G  100%      32.5u      72.7G   56%      18.2u     129.8G     *      18.4u     128.5G   99%
+INFO 04-06 08:46:58 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:58 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:58 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:58 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:58 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:58 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:58 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:58 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+byts: 3145728, size: 196608, blocks: 64, eles: 6.000
+     512      (512, 3072)     3.0M      31.8u     148.2G     *      60.2u      78.4G   53%      31.9u     147.9G  100%      32.2u     146.7G   99%
+INFO 04-06 08:46:58 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:58 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:58 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:58 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:59 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:59 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:59 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:59 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+byts: 6291456, size: 393216, blocks: 64, eles: 12.000
+    1024     (1024, 3072)     6.0M      60.3u     156.4G     *     116.0u      81.4G   52%      60.6u     155.8G  100%      60.4u     156.4G  100%
+INFO 04-06 08:46:59 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:59 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:59 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:59 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:59 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:59 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:59 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:46:59 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+byts: 12582912, size: 786432, blocks: 64, eles: 24.000
+    2048     (2048, 3072)    12.0M     118.9u     158.8G   98%     229.8u      82.1G   51%     117.1u     161.2G     *     119.0u     158.6G   98%
+INFO 04-06 08:47:00 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:47:00 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:47:00 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:47:00 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:47:00 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:47:00 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:47:00 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:47:00 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+byts: 25165824, size: 1572864, blocks: 64, eles: 48.000
+    4096     (4096, 3072)    24.0M     225.9u     167.1G   99%     453.8u      83.2G   49%     224.4u     168.3G     *     224.6u     168.1G  100%
+INFO 04-06 08:47:01 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:47:01 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:47:01 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:47:01 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:47:02 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:47:02 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:47:02 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:47:02 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+byts: 50331648, size: 3145728, blocks: 64, eles: 96.000
+    8192     (8192, 3072)    48.0M     445.4u     169.5G   99%     902.1u      83.7G   49%     441.8u     170.9G     *     443.9u     170.1G  100%
+INFO 04-06 08:47:04 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:47:04 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:47:04 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:47:04 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:47:05 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:47:05 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:47:05 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+INFO 04-06 08:47:05 [custom_all_reduce.py:215] Registering 20 cuda graph addresses
+byts: 100663296, size: 6291456, blocks: 64, eles: 192.000
+   16384    (16384, 3072)    96.0M     886.9u     170.2G   99%    1819.5u      83.0G   48%     877.0u     172.2G     *     877.2u     172.1G  100%
+
