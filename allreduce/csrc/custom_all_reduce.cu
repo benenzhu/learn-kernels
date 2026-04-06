@@ -576,10 +576,6 @@ void CustomAllreduce::allreduce(hipStream_t stream, T* input, T* output,
     int effective_limit;
     if (env_blocks != nullptr) {
       effective_limit = block_limit;  // env override bypasses dynamic logic
-    } else if (bytes <= 256 * 1024) {
-      effective_limit = 16;
-    } else if (bytes <= 2 * 1024 * 1024) { 
-      effective_limit = 64;
     } else {
       effective_limit = 64;
     }
