@@ -13,8 +13,8 @@ SUMMARY="$LOGDIR/summary_${TIMESTAMP}.log"
 echo "=== AllReduce TP Sweep  $(date) ===" | tee "$SUMMARY"
 echo "" | tee -a "$SUMMARY"
 
-#for TP in 2 4 8; do
-for TP in 4; do
+for TP in 2 4 8; do
+#for TP in 4; do
     LOGFILE="$LOGDIR/tp${TP}_${TIMESTAMP}.log"
     echo ">>> Running TP=${TP} (nproc_per_node=${TP}) ..." | tee -a "$SUMMARY"
 

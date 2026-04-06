@@ -131,14 +131,9 @@ def main():
             lambda t, c=c: c.should_custom_ar(t), {}))
     if vllm_comm:
         c = vllm_comm
-        backends.append(("vllm_1s", c,
+        backends.append(("vllm", c,
             lambda t, c=c: c.custom_all_reduce(t),
-            lambda t, c=c: c.should_custom_ar(t),
-            {"VLLM_CUSTOM_ALLREDUCE_ALGO": "1stage"}))
-        backends.append(("vllm_2s", c,
-            lambda t, c=c: c.custom_all_reduce(t),
-            lambda t, c=c: c.should_custom_ar(t),
-            {"VLLM_CUSTOM_ALLREDUCE_ALGO": "2stage"}))
+            lambda t, c=c: c.should_custom_ar(t), {}))
     if dev_comm:
         c = dev_comm
         backends.append(("dev", c,
