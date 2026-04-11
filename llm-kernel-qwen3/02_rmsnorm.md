@@ -5,7 +5,105 @@
 RMS Layer Normalization，Qwen3 用的是 Pre-Norm 架构（Norm 在 Attention/MLP 之前）。
 aiter 将 RMSNorm + 残差加法 + 可选量化 fuse 成单个 kernel。
 
-实际代码逻辑 (`qwen3_moe.py:330-352`):
+## 数据流图
+
+### 单层 Decoder Layer 内部的残差流动
+
+```
+                        Layer N
+  ┌─────────────────────────────────────────────────────────┐
+  │                                                         │
+  │  hidden_states ─┬──────────────────────────────┐        │
+  │  (上一层 MoE    │                              │        │
+  │   输出)         ▼                              │        │
+  │          ┌─────────────┐                       │        │
+  │          │ add_rmsnorm │ ← fused!              │        │
+  │  residual│ (残差加 +   │  residual_new ────────►├──┐     │
+  │  (上一层)│  normalize) │                       │  │     │
+  │ ────────►│             │                       │  │     │
+  │          └──────┬──────┘                       │  │     │
+  │                 │ normalized                   │  │     │
+  │                 ▼                              │  │     │
+  │          ┌─────────────┐                       │  │     │
+  │          │  Attention  │                       │  │     │
+  │          └──────┬──────┘                       │  │     │
+  │                 │ attn_out                     │  │     │
+  │                 ▼                              │  │     │
+  │          ┌─────────────┐                       │  │     │
+  │          │ add_rmsnorm │ ← fused!              │  │     │
+  │          │ (残差加 +   │  residual_new ────────►├──┘─┐   │
+  │          │  normalize) │                       │    │   │
+  │   residual_new ────────►                       │    │   │
+  │          └──────┬──────┘                       │    │   │
+  │                 │ normalized                   │    │   │
+  │                 ▼                              │    │   │
+  │          ┌─────────────┐                       │    │   │
+  │          │   MoE MLP   │                       │    │   │
+  │          └──────┬──────┘                       │    │   │
+  │                 │                              │    │   │
+  └─────────────────┼──────────────────────────────┘    │   │
+                    │ hidden_states                      │   │
+                    │ (传给下一层)                        │   │
+                    ▼                                    ▼   │
+               Layer N+1 的                         Layer N+1│
+               hidden_states                        residual │
+                                                             │
+```
+
+### 多层之间的残差传递
+
+```
+Embedding
+    │
+    ▼ hidden_states
+┌─── Layer 0 ────────────────────────────────────────────────────────────┐
+│                                                                        │
+│  residual = None (首次, 无残差可加)                                     │
+│                                                                        │
+│  hidden = RMSNorm(hidden)              ← 无残差加 kernel (64 threads)  │
+│  hidden = Attention(hidden)                                            │
+│  hidden, residual = add_rmsnorm(hidden, residual)  ← 有残差加          │
+│  hidden = MoE(hidden)                                                  │
+│                                                                        │
+└────┼──────────────────────────────┼────────────────────────────────────┘
+     │ hidden                      │ residual
+     ▼                             ▼
+┌─── Layer 1~47 (每层相同) ──────────────────────────────────────────────┐
+│                                                                        │
+│  hidden, residual = add_rmsnorm(hidden, residual)  ← 有残差加          │
+│  hidden = Attention(hidden)                                            │
+│  hidden, residual = add_rmsnorm(hidden, residual)  ← 有残差加          │
+│  hidden = MoE(hidden)                                                  │
+│                                                                        │
+└────┼──────────────────────────────┼────────────────────────────────────┘
+     │ hidden                      │ residual
+     ▼                             ▼
+  Final RMSNorm (add_rmsnorm)  ← 最后做一次残差加 + normalize
+     │
+     ▼
+  LM Head → logits
+```
+
+### Fused vs 朴素实现对比
+
+```
+朴素写法 (2 个 kernel):              Fused 写法 (1 个 kernel):
+
+  HBM ──read──► residual              HBM ──read──► residual
+  HBM ──read──► hidden                HBM ──read──► hidden
+                 │                                    │
+            ┌────┴────┐                     ┌─────────┴─────────┐
+            │   ADD   │ ← kernel 1         │  add + rmsnorm   │ ← 1 kernel
+            └────┬────┘                     │  (fused)          │
+                 │                          └────┬────────┬─────┘
+            ┌────┴────┐                          │        │
+            │ RMSNorm │ ← kernel 2         write to HBM   write to HBM
+            └────┬────┘                     (normalized)  (new residual)
+                 │
+         read+write HBM ×4              read+write HBM ×2  (省一半带宽!)
+```
+
+## 实际代码逻辑 (`qwen3_moe.py:330-352`)
 
 ```python
 def forward(self, positions, hidden_states, residual):
