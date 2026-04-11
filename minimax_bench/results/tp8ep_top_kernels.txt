@@ -1,0 +1,34 @@
+=== Top 30 GPU Kernels by Total Time (TP=8 EP) ===
+Kernel                                                                                                  Count  Total(ms)    Avg(us)
+------------------------------------------------------------------------------------------------------------------------------------
+aiter::pa_bf16_pertokenFp8_gqa8_2tg_4w                                                                    310      12.50      40.31  16.4%
+void aiter::reduce_scatter_cross_device_store<std::bfloat16_t, 8>(aiter::RankData*, aiter::RankSigna      620      10.27      16.56  13.5%
+void ck::kernel_gemm_xdl_cshuffle_v3_multi_d_blockscale_b_preshuffle<ck::GridwiseGemmMultiD_blocksca      620       8.18      13.19  10.8%
+ncclDevKernel_Generic_1(ncclDevKernelArgsStorage<4096ul>)                                                 316       6.53      20.66   8.6%
+_ZN5aiter37dynamic_per_group_scaled_quant_kernelIDF16bDB8_Li32EEEvPT0_PfPKT_PKfiliibPKii                 1240       5.99       4.83   7.9%
+void ck::kernel_moe_gemm<ck::GridwiseMoeGemmBlockScale<ck::tensor_layout::gemm::RowMajor, ck::tensor      310       4.61      14.86   6.1%
+Cijk_Alik_Bljk_S_B_Bias_HA_S_SAV_UserArgs_MT16x16x64_MI16x16x1_SN_LDSB0_AFC0_AFEM1_AFEM1_ASEM1_CLR1_      310       3.70      11.93   4.9%
+void aiter::local_device_load_rmsnorm<std::bfloat16_t, 256, 2>(aiter::RankSignals, std::bfloat16_t*,      620       3.30       5.32   4.3%
+void ck_tile::kentry<2, ck_tile::MoeSortingKernel<ck_tile::MoeSortingProblemEx<int, float, 1, true,       310       2.79       9.00   3.7%
+void ck::kernel_moe_gemm<ck::GridwiseMoeGemmBlockScale<ck::tensor_layout::gemm::RowMajor, ck::tensor      310       2.21       7.14   2.9%
+void aiter::grouped_topk_kernel<float, float __vector(4), 1, true, true, false>(float*, float const*      310       2.12       6.83   2.8%
+triton_poi_fused__to_copy_all_reduce__cat_mean_pow_split_with_sizes_3                                     305       1.71       5.61   2.3%
+triton_poi_fused__to_copy_add_div_mul_rsqrt_split_split_with_sizes_4                                      310       1.71       5.50   2.2%
+triton_red_fused__to_copy_mean_pow_split_with_sizes_1                                                     310       1.67       5.38   2.2%
+triton_red_fused__to_copy_mean_pow_split_with_sizes_2                                                     305       1.64       5.37   2.2%
+triton_poi_fused__to_copy_0                                                                               310       1.61       5.21   2.1%
+triton_poi_fused__to_copy_add_div_mul_rsqrt_split_split_with_sizes_5                                      305       1.59       5.20   2.1%
+void aiter::kn_entry_2c_sbhd_cached_indirect_inplace<aiter::OpCachedFwd, 0, true, false, false, fals      310       1.56       5.04   2.1%
+_ZN5aiter45reshape_and_cache_with_per_token_quant_kernelIDF16bDB8_fLb1ELi64EEEvPKT_S4_PT0_S6_PT1_S8_      310       1.54       4.96   2.0%
+void aiter::mix_sample_outer_exponential_kernel<std::bfloat16_t, 1024, 64, 4, true>(std::bfloat16_t         6       0.32      54.00   0.4%
+Cijk_Alik_Bljk_BBS_BH_Bias_HA_S_SAV_UserArgs_MT256x16x64_MI16x16x1_SN_LDSB1_AFC0_AFEM1_AFEM1_ASEM1_C        6       0.19      32.37   0.3%
+void aiter::cross_device_reduce_1stage<std::bfloat16_t, 8, false>(aiter::RankData*, aiter::RankData*        5       0.07      14.18   0.1%
+void aiter::allgather_lastdim<std::bfloat16_t, 8>(aiter::RankData*, aiter::RankSignals, aiter::Signa        6       0.05       8.55   0.1%
+triton_red_fused__to_copy_mean_pow_split_with_sizes_0                                                       5       0.03       5.60   0.0%
+triton_poi_fused__to_copy_all_reduce__cat_mean_pow_split_with_sizes_2                                       5       0.03       5.44   0.0%
+_masked_embedding_kernel                                                                                    5       0.03       5.31   0.0%
+triton_poi_fused__to_copy_add_div_mul_rsqrt_split_split_with_sizes_3                                        5       0.03       5.25   0.0%
+void aiter::add_rmsnorm_quant_kernel<std::bfloat16_t, std::bfloat16_t, 256, 16, false, false, true,         5       0.03       5.14   0.0%
+kv_indices_generate_kernel                                                                                  5       0.02       4.42   0.0%
+__amd_rocclr_copyBuffer                                                                                     5       0.02       3.66   0.0%
+Total GPU time: 76.02 ms

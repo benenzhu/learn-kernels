@@ -1,0 +1,40 @@
+[aiter] import [module_aiter_enum] under /app/aiter-test/aiter/jit/module_aiter_enum.so
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Namespace(backend='vllm', base_url='http://localhost:8002', host='127.0.0.1', port=8000, endpoint='/v1/completions', dataset_name='random', dataset_path=None, max_concurrency=1, model='MiniMaxAI/MiniMax-M2.5', tokenizer=None, best_of=1, use_beam_search=False, num_prompts=5, logprobs=None, request_rate=inf, burstiness=1.0, seed=0, trust_remote_code=False, disable_tqdm=False, profile=True, save_result=False, save_detailed=False, metadata=None, result_dir=None, result_filename=None, ignore_eos=True, percentile_metrics='ttft,tpot,itl', metric_percentiles='99', goodput=None, sonnet_input_len=550, sonnet_output_len=150, sonnet_prefix_len=200, sharegpt_output_len=None, random_input_len=8192, random_output_len=512, random_range_ratio=0.8, random_prefix_len=0, use_chat_template=False, hf_subset=None, hf_split=None, hf_output_len=None, tokenizer_mode='auto', served_model_name=None, lora_modules=None, num_warmups=1)
+-------------------  Input/Output Length Statistics  -------------------
+ input_lens : min=7112  max=7769  mean=7364.40  avg_token_mismatch=0.00  
+ output_lens: min=418   max=512   mean=465.60  
+------------------------------------------------------------------------ 
+
+Starting initial single prompt test run...
+Warming up with 1 requests...
+  0%|          | 0/1 [00:00<?, ?it/s]100%|██████████| 1/1 [00:06<00:00,  6.38s/it]100%|██████████| 1/1 [00:06<00:00,  6.38s/it]
+Warmup completed.
+Starting profiler...
+Traffic request rate: inf
+Burstiness factor: 1.0 (Poisson process)
+Maximum request concurrency: 1
+  0%|          | 0/5 [00:00<?, ?it/s] 20%|██        | 1/5 [00:06<00:27,  6.96s/it] 40%|████      | 2/5 [00:14<00:21,  7.25s/it] 60%|██████    | 3/5 [00:20<00:13,  6.79s/it] 80%|████████  | 4/5 [00:27<00:06,  6.98s/it]100%|██████████| 5/5 [00:34<00:00,  6.76s/it]100%|██████████| 5/5 [00:34<00:00,  6.86s/it]
+Starting main benchmark run...
+Stopping profiler...
+============ Serving Benchmark Result ============
+Successful requests:                     5         
+Benchmark duration (s):                  34.31     
+Total input tokens:                      36822     
+Total generated tokens:                  2328      
+Request throughput (req/s):              0.15      
+Output token throughput (tok/s):         67.86     
+Total Token throughput (tok/s):          1141.22   
+---------------Time to First Token----------------
+Mean TTFT (ms):                          284.89    
+Median TTFT (ms):                        292.66    
+P99 TTFT (ms):                           296.09    
+-----Time per Output Token (excl. 1st token)------
+Mean TPOT (ms):                          14.16     
+Median TPOT (ms):                        14.18     
+P99 TPOT (ms):                           14.27     
+---------------Inter-token Latency----------------
+Mean ITL (ms):                           14.12     
+Median ITL (ms):                         14.14     
+P99 ITL (ms):                            14.75     
+==================================================

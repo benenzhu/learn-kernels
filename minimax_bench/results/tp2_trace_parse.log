@@ -1,0 +1,30 @@
+Loading run trace: /root/learn-kernels/minimax_bench/results/trace_tp2/rank_0/MiniMax-M2.5_ts_20260411_141456_142.pt.trace.json.gz
+Loaded run events: 431732
+Loading capture trace: /root/learn-kernels/minimax_bench/results/trace_tp2/rank_0/capture_graph_MiniMax-M2.5_ts_20260411_141354_676.pt.trace.json.gz
+Loaded capture events: 450583
+
+============================================================
+PREFILL ANALYSIS
+============================================================
+Found 5 prefill events (user_annotation)
+Using first prefill event (run trace has no warmup phase).
+Using prefill[0] (ts=838311309055, dur=55970)
+Prefill level 1 (same thread pid=1891879, tid=1891879): 196 nodes
+Level2 children with kernel launch: 1062
+Found 0 norm modules (0 used for layer split, excluding final layernorm)
+Not enough norms for layer 3
+Not enough rmsnorm modules for layer 3, writing empty XLSX
+
+============================================================
+DECODE ANALYSIS
+============================================================
+Building event index...
+First decode: decode[bs=1 tok=1 d=1]
+Looking for: capture_graph_bs_1
+Using: capture_graph_bs_1
+Events in capture_graph: 15482
+First decode (tid=3): decode[bs=1 tok=1 d=1]
+  Range: 838318233323 ~ 838318233432 (dur=110)
+  GPU kernels: 3
+Direct children with kernels: 128
+No norm module found in capture_graph modules.
