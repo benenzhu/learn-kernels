@@ -5,170 +5,173 @@
 RMS Layer Normalization，Qwen3 用的是 Pre-Norm 架构（Norm 在 Attention/MLP 之前）。
 aiter 将 RMSNorm + 残差加法 + 可选量化 fuse 成单个 kernel。
 
-## 数据流图
+## Data Flow Diagrams
 
-### 单层 Decoder Layer 内部的残差流动
-
-```
-                        Layer N
-  ┌─────────────────────────────────────────────────────────┐
-  │                                                         │
-  │  hidden_states ─┬──────────────────────────────┐        │
-  │  (上一层 MoE    │                              │        │
-  │   输出)         ▼                              │        │
-  │          ┌─────────────┐                       │        │
-  │          │ add_rmsnorm │ ← fused!              │        │
-  │  residual│ (残差加 +   │  residual_new ────────►├──┐     │
-  │  (上一层)│  normalize) │                       │  │     │
-  │ ────────►│             │                       │  │     │
-  │          └──────┬──────┘                       │  │     │
-  │                 │ normalized                   │  │     │
-  │                 ▼                              │  │     │
-  │          ┌─────────────┐                       │  │     │
-  │          │  Attention  │                       │  │     │
-  │          └──────┬──────┘                       │  │     │
-  │                 │ attn_out                     │  │     │
-  │                 ▼                              │  │     │
-  │          ┌─────────────┐                       │  │     │
-  │          │ add_rmsnorm │ ← fused!              │  │     │
-  │          │ (残差加 +   │  residual_new ────────►├──┘─┐   │
-  │          │  normalize) │                       │    │   │
-  │   residual_new ────────►                       │    │   │
-  │          └──────┬──────┘                       │    │   │
-  │                 │ normalized                   │    │   │
-  │                 ▼                              │    │   │
-  │          ┌─────────────┐                       │    │   │
-  │          │   MoE MLP   │                       │    │   │
-  │          └──────┬──────┘                       │    │   │
-  │                 │                              │    │   │
-  └─────────────────┼──────────────────────────────┘    │   │
-                    │ hidden_states                      │   │
-                    │ (传给下一层)                        │   │
-                    ▼                                    ▼   │
-               Layer N+1 的                         Layer N+1│
-               hidden_states                        residual │
-                                                             │
-```
-
-### 多层之间的残差传递
+### Residual Stream: Single Decoder Layer
 
 ```
-Embedding
-    │
-    ▼ hidden_states
-┌─── Layer 0 ────────────────────────────────────────────────────────────┐
-│                                                                        │
-│  residual = None (首次, 无残差可加)                                     │
-│                                                                        │
-│  hidden = RMSNorm(hidden)              ← 无残差加 kernel (64 threads)  │
-│  hidden = Attention(hidden)                                            │
-│  hidden, residual = add_rmsnorm(hidden, residual)  ← 有残差加          │
-│  hidden = MoE(hidden)                                                  │
-│                                                                        │
-└────┼──────────────────────────────┼────────────────────────────────────┘
-     │ hidden                      │ residual
-     ▼                             ▼
-┌─── Layer 1~47 (每层相同) ──────────────────────────────────────────────┐
-│                                                                        │
-│  hidden, residual = add_rmsnorm(hidden, residual)  ← 有残差加          │
-│  hidden = Attention(hidden)                                            │
-│  hidden, residual = add_rmsnorm(hidden, residual)  ← 有残差加          │
-│  hidden = MoE(hidden)                                                  │
-│                                                                        │
-└────┼──────────────────────────────┼────────────────────────────────────┘
-     │ hidden                      │ residual
-     ▼                             ▼
-  Final RMSNorm (add_rmsnorm)  ← 最后做一次残差加 + normalize
-     │
-     ▼
-  LM Head → logits
+              hidden                  residual
+          (from prev layer)       (from prev layer)
+                |                        |
+                v                        v
+        +---------------+               |
+        |  add_rmsnorm  |<--------------+
+        |  (fused)      |---> new residual = hidden + residual
+        +-------+-------+                          |
+                |                                   |
+                v  normalized                       |
+        +---------------+                          |
+        |   Attention   |                          |
+        +-------+-------+                          |
+                |                                   |
+                v  attn_out                         v
+        +---------------+                          |
+        |  add_rmsnorm  |<-------------------------+
+        |  (fused)      |---> new residual = attn_out + prev_residual
+        +-------+-------+                          |
+                |                                   |
+                v  normalized                       |
+        +---------------+                          |
+        |   MoE MLP     |                          |
+        +-------+-------+                          |
+                |                                   |
+                v                                   v
+              hidden  ----------------------> residual
+          (to next layer)                 (to next layer)
 ```
 
-### Fused vs 朴素实现对比
+### Residual Accumulation Across Layers
+
+The residual is NOT always adding back to the embedding.
+It **accumulates** every sub-layer's contribution:
 
 ```
-朴素写法 (2 个 kernel):              Fused 写法 (1 个 kernel):
-
-  HBM ──read──► residual              HBM ──read──► residual
-  HBM ──read──► hidden                HBM ──read──► hidden
-                 │                                    │
-            ┌────┴────┐                     ┌─────────┴─────────┐
-            │   ADD   │ ← kernel 1         │  add + rmsnorm   │ ← 1 kernel
-            └────┬────┘                     │  (fused)          │
-                 │                          └────┬────────┬─────┘
-            ┌────┴────┐                          │        │
-            │ RMSNorm │ ← kernel 2         write to HBM   write to HBM
-            └────┬────┘                     (normalized)  (new residual)
-                 │
-         read+write HBM ×4              read+write HBM ×2  (省一半带宽!)
+Embedding output = emb
+        |
+        v
+ +--- Layer 0 ---------------------------------------------------+
+ |  residual = emb                        (initialized)           |
+ |  hidden   = RMSNorm(emb)              (no add, first layer)   |
+ |  hidden   = Attn_0(hidden)                                    |
+ |  residual = emb + Attn_0_out          (1st accumulation)      |
+ |  hidden   = RMSNorm(residual)                                 |
+ |  hidden   = MoE_0(hidden)                                     |
+ +----------------------------------------------------------------+
+        |                        |
+        v hidden                 v residual = emb + Attn_0
+ +--- Layer 1 ---------------------------------------------------+
+ |  residual = MoE_0_out + (emb + Attn_0)                        |
+ |           = emb + Attn_0 + MoE_0      (2nd accumulation)      |
+ |  hidden   = RMSNorm(residual)                                 |
+ |  hidden   = Attn_1(hidden)                                    |
+ |  residual = emb + Attn_0 + MoE_0 + Attn_1                    |
+ |  hidden   = RMSNorm(residual)                                 |
+ |  hidden   = MoE_1(hidden)                                     |
+ +----------------------------------------------------------------+
+        |                        |
+        v                        v residual = emb + Attn_0 + MoE_0 + Attn_1
+       ...                      ...
+        |                        |
+        v                        v
+ +--- Layer 47 --------------------------------------------------+
+ |  residual = emb + sum(Attn_i + MoE_i, i=0..46) + Attn_47     |
+ |  ...                                                           |
+ +----------------------------------------------------------------+
+        |                        |
+        v                        v
+  Final add_rmsnorm:
+    residual = emb + sum(Attn_i + MoE_i, i=0..47)
+    output   = RMSNorm(residual)
+        |
+        v
+    LM Head --> logits
 ```
 
-## 实际代码逻辑 (`qwen3_moe.py:330-352`)
+**Key insight**: the residual is a "highway" that accumulates
+ALL sub-layer outputs. After 48 layers:
+
+```
+residual = emb + Attn_0 + MoE_0 + Attn_1 + MoE_1 + ... + Attn_47 + MoE_47
+                 \_______________/   \_______________/       \_____________/
+                    Layer 0              Layer 1                Layer 47
+```
+
+### Why Fuse: Naive vs Fused Kernel
+
+```
+Naive (2 kernels):                  Fused (1 kernel):
+
+  HBM --read--> residual             HBM --read--> residual
+  HBM --read--> hidden               HBM --read--> hidden
+                  |                                   |
+           +------+------+              +-------------+-------------+
+           |     ADD     | kernel 1     | add + rmsnorm (1 kernel) |
+           +------+------+              +------+-----------+-------+
+                  |                            |           |
+           +------+------+               write to HBM  write to HBM
+           |   RMSNorm  | kernel 2      (normalized)   (new residual)
+           +------+------+
+                  |
+  HBM read+write x4                  HBM read+write x2  (halved!)
+```
+
+## Code (`qwen3_moe.py:330-352`)
 
 ```python
 def forward(self, positions, hidden_states, residual):
-    # ---- 第一个 RMSNorm (pre-attention) ----
-    if residual is None:                    # 第 0 层: embedding 刚出来, 没有 residual
+    # pre-attention RMSNorm
+    if residual is None:              # Layer 0: no residual yet
         residual = hidden_states
-        hidden_states = self.input_layernorm(hidden_states)           # 无残差加
-    else:                                   # 第 1~47 层: 上一层的 MoE 输出
-        hidden_states, residual = self.input_layernorm(hidden_states, residual)  # 有残差加
+        hidden_states = self.input_layernorm(hidden_states)           # no add
+    else:                             # Layer 1~47: fused add + norm
+        hidden_states, residual = self.input_layernorm(hidden_states, residual)
 
-    # ---- Attention ----
     hidden_states = self.self_attn(hidden_states, ...)
 
-    # ---- 第二个 RMSNorm (post-attention / pre-MoE) ----
-    hidden_states, residual = self.post_attention_layernorm(hidden_states, residual)  # 有残差加
+    # post-attention RMSNorm (always fused add + norm)
+    hidden_states, residual = self.post_attention_layernorm(hidden_states, residual)
 
-    # ---- MoE MLP ----
     hidden_states = self.mlp(hidden_states)
-    return hidden_states, residual   # residual 传给下一层
+    return hidden_states, residual    # both passed to next layer
 ```
 
-对应到 4 种 RMSNorm 调用:
+Four RMSNorm call sites:
 
 ```
-第 0 层 input_layernorm:   RMSNorm(x)                    → 无残差加 (residual=None, 首次进入)
-第 1~47 层 input_layernorm: RMSNorm(x, residual)          → 有残差加 (fuse 了上一层 MoE 的残差)
-所有层 post_attn_layernorm: RMSNorm(attn_out, residual)   → 有残差加 (fuse 了 attention 的残差)
-最后 model.norm:            RMSNorm(x, residual)          → 有残差加 (最后一层输出后)
+Layer 0 input_layernorm:    RMSNorm(x)            no add   (residual=None)
+Layer 1-47 input_layernorm: add_rmsnorm(x, res)   fused    (prev MoE residual)
+All post_attn_layernorm:    add_rmsnorm(x, res)   fused    (attention residual)
+Final model.norm:           add_rmsnorm(x, res)   fused    (last layer output)
 ```
 
-### 为什么要 fuse 残差加?
+### Why fuse residual add?
 
-Pre-Norm Transformer 的标准写法是两步：
+Naive: 2 kernels, 2 full HBM round-trips for hidden_states
 ```python
-# 朴素写法 (2 个 kernel, 2 次读写 hidden_states)
 hidden_states = hidden_states + residual   # kernel 1: elementwise add
 hidden_states = RMSNorm(hidden_states)     # kernel 2: normalize
 ```
 
-aiter 的 fused 写法合并成 1 个 kernel：
+Fused: 1 kernel, 1 round-trip (halved bandwidth)
 ```python
-# Fused (1 个 kernel, 1 次读写)
 hidden_states, residual = add_rmsnorm(hidden_states, residual)
-# 内部: residual_new = hidden + residual
-#        output = RMSNorm(residual_new)
-# 同时输出 normalized 结果和新的 residual (供下一个子层使用)
+# internally: residual_new = hidden + residual
+#             output = RMSNorm(residual_new)
+# outputs both normalized result AND new residual for next sub-layer
 ```
 
-好处：hidden_states 只需从 HBM 读 1 次（而不是 2 次），对于 memory-bound 的小 hidden_size=2048 尤其重要。
+Especially important for small hidden_size=2048 where ops are memory-bound.
 
-### 残差连接的本质
+### Residual connection fundamentals
 
-残差连接 (residual connection) 让梯度能直接流过深层网络，避免梯度消失：
-```
-每个子层的输出 = 子层计算结果 + 输入 (跳过子层的直连)
+Every sub-layer: `output = SubLayer(input) + input`
 
-即: output = SubLayer(input) + input
-```
+Qwen3 has 2 residual paths per layer:
+1. Attention: `residual += Attention(RMSNorm(residual))`
+2. MoE MLP:  `residual += MoE(RMSNorm(residual))`
 
-Qwen3 每层有 **2 条残差路径**:
-1. Attention 子层: `residual = hidden + Attention(RMSNorm(hidden))`
-2. MoE MLP 子层:  `residual = hidden + MoE(RMSNorm(hidden))`
-
-所有 Pre-Norm 架构的 Transformer (GPT-2 以后基本都是) 都有这种残差加。
-Post-Norm 架构 (原始 Transformer, BERT) 也有残差，只是 Norm 的位置不同。
+All Pre-Norm Transformers (GPT-2 onward) use this pattern.
+Post-Norm (original Transformer, BERT) also has residuals, but Norm placement differs.
 
 ## RMSNorm 公式
 
