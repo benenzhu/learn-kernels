@@ -1,168 +1,151 @@
 # MiniMax-M2.5 单 Decode Layer Kernel 序列
 
-TP=2, bs=1 decode, eager mode (level=0), 120 层平均
+level=3 (CUDA graph), bs=1 decode, PA-to-PA 切分, 305 层统计
 
 ## 总览
 
-- **38 个 GPU kernel / layer**
-- **336.3 us / layer** (eager, 含 CPU launch overhead)
-- **× 62 layers = 20.9 ms / step** (eager)
-- **对比 level=3 CUDA graph: ~700 us / step = 11.3 us / layer**（graph 消除了 kernel launch gap）
+- **25 个 GPU kernel / layer** (compiled 模式, QK-norm/RoPE 已 fuse 为 Triton kernels)
+- 数据来源: 运行时 trace, CUDA graph replay, 305 个标准层的 min/median/mean/max
 
-## Kernel 序列 (从前到后)
+| 配置 | Mean/layer (us) | × 62 layers (ms) | 通信占比 |
+|------|----------------:|------------------:|---------:|
+| TP=2 | 226.3 | 14.03 | 14.3% |
+| TP=4 | 228.9 | 14.19 | 12.9% |
+| TP=8 EP | 242.6 | 15.04 | 22.3% |
 
-### Attention Block
+---
 
-```
-Step  Kernel                                     耗时(us)   占比    功能
-────  ─────────────────────────────────────────  ────────  ──────  ────────────────────────────
- [0]  pa_bf16_pertokenFp8_gqa8_2tg_4w             42.5    12.6%   Paged Attention (GQA, FP8 KV)
- [1]  dynamic_per_group_scaled_quant (FP8)          4.8     1.4%   attn output → FP8 量化
- [2]  gemm_blockscale_b_preshuffle (CK)            12.4     3.7%   o_proj GEMM [M,3072]×[3072,1536]
- [3]  reduce_scatter_cross_device_store             16.4     4.9%   TP allreduce (attention output)
- [4]  local_device_load_rmsnorm                     4.8     1.4%   fused: load remote + RMSNorm (post-attn)
-                                                  ──────
-                                       Subtotal:  80.9    24.1%
-```
-
-### MoE Block
+## Kernel 序列 (3 配置对比, median 值)
 
 ```
-Step  Kernel                                     耗时(us)   占比    功能
-────  ─────────────────────────────────────────  ────────  ──────  ────────────────────────────
- [5]  bfloat16tofloat32_copy                        5.4     1.6%   gate input BF16→FP32 cast
- [6]  Cijk_Alik_Bljk (rocBLAS)                     12.7     3.8%   gate GEMM [M,3072]×[3072,256] → router logits
- [7]  grouped_topk_kernel                           7.0     2.1%   top-8 expert 选择 + softmax weight
- [8]  MoeSortingKernel (CK tile)                    8.1     2.4%   token→expert 排序 (生成 sorted indices)
- [9]  dynamic_per_group_scaled_quant (FP8)          4.7     1.4%   MoE input → FP8 量化
-[10]  kernel_moe_gemm (CK, stage1)                 21.1     6.3%   up_proj + gate_proj GEMM (fused, 所有 active experts)
-[11]  dynamic_per_group_scaled_quant (FP8)          4.8     1.4%   intermediate → FP8 量化 (for down_proj)
-[12]  kernel_moe_gemm (CK, stage2)                  7.8     2.3%   down_proj GEMM (所有 active experts)
-[13]  reduce_scatter_cross_device_store              9.2     2.7%   TP allreduce (MoE output)
-[14]  local_device_load_rmsnorm                      5.0     1.5%   fused: load remote + RMSNorm (post-MoE)
-                                                  ──────
-                                       Subtotal:  85.8    25.5%
+Pos  Kernel (简称)                  功能               TP=2    TP=4    TP=8EP   备注
+                                                      med(us) med(us) med(us)
+───  ─────────────────────────────  ──────────────── ─────── ─────── ─────── ─────────────────
+ [0] pa_bf16_pertokenFp8_gqa8      Paged Attention    40.5    41.1    40.2   最大单 kernel, 不随 TP 变
+ [1] dynamic_per_group_quant       o_proj FP8 quant    5.0     5.7     4.7
+ [2] gemm_blockscale_preshuffle    o_proj GEMM        12.6     7.1     8.0   TP=2:[3072,1536] TP=4:[3072,768]
+ [3] reduce_scatter_store          attn allreduce      9.5     7.1    14.2   TP=8EP 显著增大
+ [4] local_device_load_rmsnorm     fused load+norm     5.6     5.7     5.6
+ [5] triton_fused_copy             gate FP32 cast      5.5     5.6     5.0
+ [6] Cijk_Alik_Bljk (rocBLAS)     gate GEMM          12.1    12.7    11.8   FP32, [3072,256]→router logits
+ [7] grouped_topk_kernel           top-8 选择          7.0     7.1     6.9
+ [8] MoeSortingKernel              token→expert 排序   8.2     8.5     9.1
+ [9] dynamic_per_group_quant       MoE input quant     4.8     5.6     4.7
+[10] kernel_moe_gemm (stage1)      up+gate fused      21.2    19.9    19.6   最大 MoE kernel
+[11] dynamic_per_group_quant       intermediate quant  4.8     5.6     4.8
+[12] kernel_moe_gemm (stage2)      down_proj           7.8     7.1     8.1
+[13] reduce_scatter_store          MoE allreduce       9.2     7.1    13.6   TP=8EP 显著增大
+[14] local_device_load_rmsnorm     fused load+norm     4.9     5.7     5.0
+[15] dynamic_per_group_quant       qkv input quant     4.7     5.6     4.6
+[16] gemm_blockscale_preshuffle    qkv_proj GEMM      10.5    18.5    18.5   TP=4/8: shape 变化导致更慢!
+[17] triton_fused (QK-norm 1/6)    mean(x²) reduce     5.6     5.7     5.6   ┐
+[18] triton_fused (QK-norm 2/6)    mean reduce         5.7     5.7     5.6   │ QK-norm
+[19] triton_fused (QK-norm 3/6)    cat + allreduce     5.8     5.7     5.7   │ 6 个 fused Triton
+[20] ncclDevKernel_Generic         NCCL allreduce     13.1    12.0    20.7   │ ← 通信大头
+[21] triton_fused (QK-norm 4/6)    rsqrt+scale Q       5.6     5.7     5.7   │
+[22] triton_fused (QK-norm 5/6)    rsqrt+scale K       5.6     5.6     4.9   ┘
+[23] kn_entry_2c_sbhd_cached      RoPE apply          5.5     5.7     4.8
+[24] reshape_and_cache_quant       KV cache FP8 写入   4.8     5.6     4.7
 ```
 
-### QKV Projection (下一层准备)
-
-```
-Step  Kernel                                     耗时(us)   占比    功能
-────  ─────────────────────────────────────────  ────────  ──────  ────────────────────────────
-[15]  dynamic_per_group_scaled_quant (FP8)          4.7     1.4%   hidden → FP8 量化 (for qkv proj)
-[16]  gemm_blockscale_b_preshuffle (CK)            12.0     3.6%   qkv_proj GEMM [M,3072]×[3072,2048]
-                                                  ──────
-                                       Subtotal:  16.7     5.0%
-```
-
-### QK-Norm (RoPE 准备)
-
-```
-Step  Kernel                                     耗时(us)   占比    功能
-────  ─────────────────────────────────────────  ────────  ──────  ────────────────────────────
-[17]  bfloat16tofloat32_copy                        4.8     1.4%   Q BF16→FP32
-[18]  bfloat16tofloat32_copy                        5.7     1.7%   K BF16→FP32
-[19]  pow_tensor_cuda                               5.5     1.6%   Q² (for QK-norm)
-[20]  reduce_kernel (mean)                          5.9     1.8%   mean(Q²) = variance
-[21]  pow_tensor_cuda                               5.3     1.6%   K²
-[22]  reduce_kernel (mean)                          4.9     1.5%   mean(K²) = variance
-[23]  CatArrayBatchedCopy                           5.7     1.7%   concat Q_norm, K_norm
-[24]  ncclDevKernel_Generic (NCCL)                 16.1     4.8%   allreduce (QK-norm sync)
-                                                  ──────
-                                       Subtotal:  53.9    16.0%
-```
-
-### RoPE + KV Cache
-
-```
-Step  Kernel                                     耗时(us)   占比    功能
-────  ─────────────────────────────────────────  ────────  ──────  ────────────────────────────
-[25]  BUnaryFunctor (div)                           4.8     1.4%   normalize (÷ variance)
-[26]  CUDAFunctorOnSelf_add                         4.7     1.4%   residual add
-[27]  rsqrt_kernel                                  4.8     1.4%   1/√variance
-[28]  elementwise_kernel (mul+cast)                 5.7     1.7%   apply norm weight + cast
-[29]  BinaryFunctor (RoPE cos/sin mul)             29.8     8.9%   RoPE 旋转位置编码 (Q)
-[30]  bfloat16_copy                                 4.8     1.4%   FP32→BF16 cast
-[31]  CUDAFunctorOnSelf_add                         4.7     1.4%   residual add
-[32]  rsqrt_kernel                                  4.7     1.4%   1/√variance
-[33]  elementwise_kernel (mul+cast)                 5.6     1.7%   apply norm weight + cast
-[34]  BinaryFunctor (RoPE cos/sin mul)             13.8     4.1%   RoPE 旋转位置编码 (K)
-[35]  bfloat16_copy                                 5.5     1.6%   FP32→BF16 cast
-[36]  kn_entry_2c_sbhd_cached_indirect              5.2     1.5%   RoPE fused 应用 (final)
-[37]  reshape_and_cache_with_per_token_quant         4.9     1.5%   KV cache 写入 (FP8 量化)
-                                                  ──────
-                                       Subtotal:  99.0    29.4%
-```
+---
 
 ## 按模块汇总
 
 ```
-模块                            Kernels    耗时(us)    占比      备注
-──────────────────────────────  ────────  ────────  ──────  ──────────────────
-Attention (PA + o_proj)              3      59.7    17.8%   PA 是最大单 kernel (42.5us)
-MoE (gate + sort + gemm×2)          6      61.5    18.3%   stage1(21us) >> stage2(7.8us)
-Communication (RS + NCCL)           3      41.7    12.4%   attn RS(16.4) > MoE RS(9.2)
-QK-Norm                             8      53.9    16.0%   eager 下 8 个小 kernel, level=3 会 fuse
-RoPE + KV cache                    11      99.0    29.4%   RoPE 最重 (29.8+13.8=43.6us)
-FP8 Quant                           4      19.0     5.7%   4 次, 每次 ~4.8us
-Other (cast, copy)                   3      16.0     4.8%
-                                  ────    ──────
-Total                               38    336.3
+模块                      TP=2 med(us)  TP=4 med(us)  TP=8EP med(us)  TP=2 占比
+────────────────────────  ──────────── ──────────── ────────────────  ────────
+Paged Attention [0]            40.5         41.1          40.2          17.9%
+o_proj (quant+GEMM) [1-2]     17.6         12.8          12.7           7.8%
+MoE pipeline [5-12]           71.4         72.1          70.0          31.6%
+  ├─ gate GEMM [6]            12.1         12.7          11.8
+  ├─ topk+sort [7-8]          15.2         15.6          16.0
+  ├─ quant [9,11]              9.6         11.2           9.5
+  ├─ stage1 GEMM [10]         21.2         19.9          19.6
+  └─ stage2 GEMM [12]          7.8          7.1           8.1
+QKV proj (quant+GEMM) [15-16] 15.2         24.1          23.1           6.7%
+QK-norm+RoPE [17-23]          47.0         46.1          53.0          20.8%
+  ├─ Triton fused [17-19,21-22] 28.3       28.4          27.5
+  └─ NCCL allreduce [20]      13.1         12.0          20.7
+KV cache write [24]             4.8          5.6           4.7           2.1%
+Communication total            32.4         26.2          54.1          14.3%
+  ├─ attn RS [3]                9.5          7.1          14.2
+  ├─ MoE RS [13]                9.2          7.1          13.6
+  └─ NCCL QK-norm [20]        13.1         12.0          20.7
+Norm (fused load+norm) [4,14]  10.5         11.4          10.6           4.6%
+FP8 Quant [1,9,11,15]         20.3         22.5          18.8           9.0%
 ```
 
-## 优化建议 (按收益排序)
+---
 
-### 1. RoPE: 29.8 + 13.8 = 43.6 us (13%)  ← 最大优化空间
-
-eager 模式下 RoPE 拆成了 QK-norm(8 个) + RoPE(Q/K 各一套) = ~15 个小 kernel。
-level=3 (compiled) 会 fuse 成 Triton kernel, 但仍有优化空间:
-- **当前**: Q 和 K 的 RoPE 分开做 (29.8 + 13.8 us)
-- **优化**: fuse Q+K RoPE 成单个 kernel, 共享 cos/sin table 读取
-- **预期收益**: ~20 us → 节省 ~23 us/layer
-
-### 2. PA (Paged Attention): 42.5 us (12.6%)
-
-decode bs=1 时 PA 是最大单 kernel。
-- **当前**: `pa_bf16_pertokenFp8_gqa8_2tg_4w` (GQA 8 heads, FP8 KV)
-- **优化方向**:
-  - Speculative decode (MTP) 可以用更大 batch amortize PA cost
-  - 如果 KV cache 很长 (ISL=8k), PA 会更慢; prefix caching 可减少重复计算
-
-### 3. MoE stage1 GEMM: 21.1 us (6.3%)
-
-stage1 (up+gate fused) 比 stage2 (down) 慢 2.7×:
-- stage1: [M, K=1536] × [K, N=3072] (up) + [M, K=1536] × [K, N=3072] (gate)
-- stage2: [M, K=3072] × [K, N=1536]
-- **优化**: 检查 CK MoE kernel 的 tile config 是否为此 shape tuned
-
-### 4. Communication: 41.7 us (12.4%)
-
-- Attention allreduce (16.4 us) > MoE allreduce (9.2 us)
-- NCCL QK-norm sync (16.1 us) — 这可能可以和 attention allreduce overlap
-- **优化**: 检查是否可以合并 attention RS 和 QK-norm NCCL 为单次通信
-
-### 5. FP8 Quant: 19.0 us (5.7%)
-
-4 次独立的 FP8 量化 (attn_out, moe_in, moe_inter, qkv_in):
-- **优化**: fuse quant 到前一个 kernel 的 epilogue (如 CK GEMM output 直接写 FP8)
-
-### 6. Gate GEMM (rocBLAS): 12.7 us (3.8%)
-
-`Cijk_Alik_Bljk` 是 rocBLAS 的 FP32 GEMM for router:
-- **优化**: gate weight 是 FP32 (精度需要), 但可以考虑 FP16 gate 如果精度允许
-- 或者 fuse gate + topk 成单个 kernel
-
-## 附: Compiled (level=3) vs Eager (level=0) 对比
+## Min / Median / Max 对比 (TP=2)
 
 ```
-                        Eager (level=0)    Compiled (level=3)   差异
-Decode step (62 layers)     20.9 ms            ~0.7 ms          30× faster
-Per layer                   336 us             ~11.3 us         30× faster
-TPOT (bs=1)                 21.0 ms            14.2 ms          1.5× faster
-
-差距来源:
-  - Kernel launch overhead: eager 下每个 kernel ~3-5 us CPU dispatch
-    38 kernels × ~4 us = ~150 us/layer 纯 launch overhead
-  - Kernel fusion: compiled 模式下 QK-norm/RoPE 的 ~15 个小 kernel fuse 成 2-3 个 Triton kernel
-  - CUDA graph: 消除所有 CPU-GPU 同步点
+Pos  Kernel                         Min    Med    Max    Max/Med  波动原因
+───  ─────────────────────────────  ─────  ─────  ─────  ───────  ──────────
+ [0] PA                             38.2   40.5   44.0    1.09   KV cache 长度变化
+ [3] attn reduce_scatter             5.6    9.5   16.7    1.76   跨 XCD 通信抖动
+[10] MoE stage1 GEMM                20.0   21.2   24.0    1.13   expert load 不均
+[13] MoE reduce_scatter              5.7    9.2   16.0    1.74   跨 XCD 通信抖动
+[20] NCCL allreduce                  9.8   13.1   18.8    1.44   网络竞争
+ [2] o_proj GEMM                    11.5   12.6   14.4    1.14   稳定
+[16] qkv_proj GEMM                   9.6   10.5   13.0    1.24   稳定
 ```
+
+**通信 kernel 波动最大** (max/med ~1.7x), 计算 kernel 很稳定 (max/med ~1.1x)
+
+---
+
+## 优化建议 (按 median 耗时排序)
+
+### 1. Paged Attention: 40.5 us (17.9%) ← 最大单 kernel
+
+- GQA 8 heads, FP8 KV cache, decode bs=1
+- 不随 TP 变化 (每个 rank 处理相同的 heads)
+- **优化**: MTP (speculative decode) 增大 effective batch, amortize PA 开销
+- **优化**: FlashDecoding / split-K attention 可能更适合长 KV (ISL=8k)
+
+### 2. MoE stage1 GEMM: 21.2 us (9.4%)
+
+- up_proj + gate_proj fused, CK MoE kernel
+- stage1 比 stage2 慢 2.7x (output 大 2x + activation)
+- **优化**: 检查 CK tile config 是否 tuned; 考虑 MFMA 指令选择
+
+### 3. Communication: 32.4 us (14.3%)
+
+- 3 次通信/layer: attn RS + MoE RS + NCCL QK-norm
+- TP=8EP 下通信翻倍到 54 us (22%)
+- **优化**: overlap RS 与下一个 kernel 的计算; 合并 attn RS + QK-norm NCCL
+
+### 4. QKV proj GEMM: 10.5 us (TP=2) / 18.5 us (TP=4/8)
+
+- TP=4/8 反而更慢! TP=2: [3072,2048], TP=4: [3072,1024]
+- 小 N 导致 CK tile 效率低
+- **优化**: 重新 tune CK gemm config for 小 N shapes
+
+### 5. Gate GEMM (rocBLAS): 12.1 us (5.3%)
+
+- FP32 精度 (router 需要), [1, 3072]×[3072, 256]
+- **优化**: FP16 gate 如精度允许; 或 fuse gate+topk
+
+### 6. QK-norm Triton: 28.3 us (12.5%)
+
+- 5 个 Triton kernel 做 QK-norm (mean, pow, rsqrt, scale)
+- **优化**: fuse 成 1 个 kernel (类似 RMSNorm 的实现方式)
+
+### 7. FP8 Quant: 20.3 us (9.0%)
+
+- 4 次独立量化 (o_proj, MoE input, MoE intermediate, qkv input)
+- 每次 ~5 us, 但累计可观
+- **优化**: fuse 到前一个 GEMM 的 epilogue
+
+---
+
+## 数据提取方法
+
+从 level=3 运行时 trace 提取:
+1. 获取 GPU kernel stream (cat=kernel), 按时间排序
+2. 找到所有 `pa_bf16` 的位置 → 每个 PA 标记一层的开始
+3. PA[i] 到 PA[i+1] 之间的 kernel = 一层的完整序列
+4. 标准层 = gap=25 kernels 的层 (305/310 层, 排除首尾非标准层)
+5. 对每个 kernel position 计算 min/median/mean/max
