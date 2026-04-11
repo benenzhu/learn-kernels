@@ -5,12 +5,72 @@
 RMS Layer Normalization，Qwen3 用的是 Pre-Norm 架构（Norm 在 Attention/MLP 之前）。
 aiter 将 RMSNorm + 残差加法 + 可选量化 fuse 成单个 kernel。
 
+实际代码逻辑 (`qwen3_moe.py:330-352`):
+
+```python
+def forward(self, positions, hidden_states, residual):
+    # ---- 第一个 RMSNorm (pre-attention) ----
+    if residual is None:                    # 第 0 层: embedding 刚出来, 没有 residual
+        residual = hidden_states
+        hidden_states = self.input_layernorm(hidden_states)           # 无残差加
+    else:                                   # 第 1~47 层: 上一层的 MoE 输出
+        hidden_states, residual = self.input_layernorm(hidden_states, residual)  # 有残差加
+
+    # ---- Attention ----
+    hidden_states = self.self_attn(hidden_states, ...)
+
+    # ---- 第二个 RMSNorm (post-attention / pre-MoE) ----
+    hidden_states, residual = self.post_attention_layernorm(hidden_states, residual)  # 有残差加
+
+    # ---- MoE MLP ----
+    hidden_states = self.mlp(hidden_states)
+    return hidden_states, residual   # residual 传给下一层
 ```
-x = RMSNorm(x)                    # pre-attention norm (无残差)
-x = RMSNorm(attn_out + residual)   # post-attention norm (有残差加)
-x = RMSNorm(moe_out + residual)    # post-MoE norm (有残差加)
-x = RMSNorm(x)                    # final norm (最后一层, 无残差)
+
+对应到 4 种 RMSNorm 调用:
+
 ```
+第 0 层 input_layernorm:   RMSNorm(x)                    → 无残差加 (residual=None, 首次进入)
+第 1~47 层 input_layernorm: RMSNorm(x, residual)          → 有残差加 (fuse 了上一层 MoE 的残差)
+所有层 post_attn_layernorm: RMSNorm(attn_out, residual)   → 有残差加 (fuse 了 attention 的残差)
+最后 model.norm:            RMSNorm(x, residual)          → 有残差加 (最后一层输出后)
+```
+
+### 为什么要 fuse 残差加?
+
+Pre-Norm Transformer 的标准写法是两步：
+```python
+# 朴素写法 (2 个 kernel, 2 次读写 hidden_states)
+hidden_states = hidden_states + residual   # kernel 1: elementwise add
+hidden_states = RMSNorm(hidden_states)     # kernel 2: normalize
+```
+
+aiter 的 fused 写法合并成 1 个 kernel：
+```python
+# Fused (1 个 kernel, 1 次读写)
+hidden_states, residual = add_rmsnorm(hidden_states, residual)
+# 内部: residual_new = hidden + residual
+#        output = RMSNorm(residual_new)
+# 同时输出 normalized 结果和新的 residual (供下一个子层使用)
+```
+
+好处：hidden_states 只需从 HBM 读 1 次（而不是 2 次），对于 memory-bound 的小 hidden_size=2048 尤其重要。
+
+### 残差连接的本质
+
+残差连接 (residual connection) 让梯度能直接流过深层网络，避免梯度消失：
+```
+每个子层的输出 = 子层计算结果 + 输入 (跳过子层的直连)
+
+即: output = SubLayer(input) + input
+```
+
+Qwen3 每层有 **2 条残差路径**:
+1. Attention 子层: `residual = hidden + Attention(RMSNorm(hidden))`
+2. MoE MLP 子层:  `residual = hidden + MoE(RMSNorm(hidden))`
+
+所有 Pre-Norm 架构的 Transformer (GPT-2 以后基本都是) 都有这种残差加。
+Post-Norm 架构 (原始 Transformer, BERT) 也有残差，只是 Norm 的位置不同。
 
 ## RMSNorm 公式
 
