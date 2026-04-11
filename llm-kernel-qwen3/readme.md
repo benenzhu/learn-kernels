@@ -1,6 +1,23 @@
 # Qwen3-30B-A3B MoE 推理 Kernel 全景图
 
-> 模型: Qwen/Qwen3-30B-A3B | GPU: MI355X (gfx950) | 框架: ATOM (eager mode) | dtype: BF16 + FP8 KV Cache
+> 模型: Qwen/Qwen3-30B-A3B | GPU: MI355X (gfx950) | 框架: ATOM (eager mode, `--level 0`) | dtype: BF16 + FP8 KV Cache
+
+## 文件导航
+
+| 文件 | 内容 |
+|------|------|
+| [01_embedding.md](01_embedding.md) | Token → Embedding 查表 |
+| [02_rmsnorm.md](02_rmsnorm.md) | RMSNorm + 残差加 (3 种变体) |
+| [03_rope.md](03_rope.md) | RoPE 旋转位置编码 |
+| [04_attention_prefill.md](04_attention_prefill.md) | Flash Attention v3 (prefill) |
+| [05_attention_decode.md](05_attention_decode.md) | Paged Attention + SplitK reduce (decode) |
+| [06_kv_cache.md](06_kv_cache.md) | KV Cache FP8 量化存储 |
+| [07_dense_gemm.md](07_dense_gemm.md) | QKV/O Projection (rocBLAS GEMM) |
+| [08_moe_gate.md](08_moe_gate.md) | MoE TopK 路由 + Token Sorting |
+| [09_moe_expert_gemm.md](09_moe_expert_gemm.md) | CK 2-Stage Expert GEMM (最大耗时) |
+| [10_lm_head.md](10_lm_head.md) | Final Norm + LM Head → Logits |
+| [11_sampling.md](11_sampling.md) | Top-p/Top-k Sampling |
+| [qwen3_moe_source_trace.md](qwen3_moe_source_trace.md) | 完整源码调用链 (Python → C++ → GPU) |
 
 ## 模型架构参数
 
