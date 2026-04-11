@@ -19,6 +19,16 @@
 | [11_sampling.md](11_sampling.md) | Top-p/Top-k Sampling |
 | [qwen3_moe_source_trace.md](qwen3_moe_source_trace.md) | 完整源码调用链 (Python → C++ → GPU) |
 
+### Kernel Source Walkthroughs (aiter HIP kernels)
+
+| 文件 | Kernel | Language |
+|------|--------|----------|
+| [kernel_walkthrough_01_rmsnorm.md](kernel_walkthrough_01_rmsnorm.md) | add_rmsnorm_quant_kernel | HIP C++ |
+| [kernel_walkthrough_02_rope.md](kernel_walkthrough_02_rope.md) | kn_entry_2c_sbhd_cached_indirect_inplace | HIP C++ |
+| [kernel_walkthrough_03_kv_cache.md](kernel_walkthrough_03_kv_cache.md) | reshape_and_cache_with_per_token_quant_kernel | HIP C++ |
+| [kernel_walkthrough_04_attention.md](kernel_walkthrough_04_attention.md) | fmha_v3 + PA + wv_splitk | ASM + HIP |
+| [kernel_walkthrough_05_sampling.md](kernel_walkthrough_05_sampling.md) | mix_sample_outer_exponential_kernel | HIP C++ |
+
 ## 模型架构参数
 
 | 参数 | 值 |
