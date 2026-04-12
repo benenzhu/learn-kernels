@@ -1,0 +1,205 @@
+[atom 07:23:35] Loading tokenizer from amd/MiniMax-M2.5-MXFP4...
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+[atom 07:23:38] Initializing engine with model amd/MiniMax-M2.5-MXFP4...
+`torch_dtype` is deprecated! Use `dtype` instead!
+[atom 07:23:38] Engine Core Mgr: Creating EngineCore for DP rank 0/1
+[atom 07:23:38] Creating EngineCore process: DP rank 0, will use GPUs 0 to 3
+[atom 07:23:38] Engine Core Mgr: Starting EngineCore for DP rank 0/1
+[aiter] Dropping 5 duplicate rows during merge of 'bf16_tuned_gemm':
+ cu_num  M    N    K  bias          dtype       outdtype  scaleAB  bpreshuffle libtype  solidx  splitK      us                                          kernelName  err_ratio  tflops      bw
+    256 32 2112 7168 False torch.bfloat16 torch.bfloat16    False        False     asm       1       6 14.2940 _ZN5aiter39bf16gemm_fp32bf16_tn_32x64_splitk_cleanE     0.0189   67.78 2159.76
+    256 48 2112 7168 False torch.bfloat16 torch.bfloat16    False        False     asm       3       6 14.8295 _ZN5aiter39bf16gemm_fp32bf16_tn_48x64_splitk_cleanE     0.0181   98.00 2101.79
+    256 64 2112 7168 False torch.bfloat16 torch.bfloat16    False        False     asm       5       6 15.3187 _ZN5aiter39bf16gemm_fp32bf16_tn_64x64_splitk_cleanE     0.0180  126.50 2054.06
+    256 80 2112 7168 False torch.bfloat16 torch.bfloat16    False        False     asm       8       7 16.0087 _ZN5aiter39bf16gemm_fp32bf16_tn_96x64_splitk_cleanE     0.0195  151.31 1984.07
+    256 96 2112 7168 False torch.bfloat16 torch.bfloat16    False        False     asm       8       6 16.4247 _ZN5aiter39bf16gemm_fp32bf16_tn_96x64_splitk_cleanE     0.0180  176.97 1951.90
+[atom 07:23:45] Use MLAAttentionImplDecoratorForPluginMode to decorate MLAAttention
+[aiter] Dropping 5 duplicate rows during merge of 'bf16_tuned_gemm':
+ cu_num  M    N    K  bias          dtype       outdtype  scaleAB  bpreshuffle libtype  solidx  splitK      us                                          kernelName  err_ratio  tflops      bw
+    256 32 2112 7168 False torch.bfloat16 torch.bfloat16    False        False     asm       1       6 14.2940 _ZN5aiter39bf16gemm_fp32bf16_tn_32x64_splitk_cleanE     0.0189   67.78 2159.76
+    256 48 2112 7168 False torch.bfloat16 torch.bfloat16    False        False     asm       3       6 14.8295 _ZN5aiter39bf16gemm_fp32bf16_tn_48x64_splitk_cleanE     0.0181   98.00 2101.79
+    256 64 2112 7168 False torch.bfloat16 torch.bfloat16    False        False     asm       5       6 15.3187 _ZN5aiter39bf16gemm_fp32bf16_tn_64x64_splitk_cleanE     0.0180  126.50 2054.06
+    256 80 2112 7168 False torch.bfloat16 torch.bfloat16    False        False     asm       8       7 16.0087 _ZN5aiter39bf16gemm_fp32bf16_tn_96x64_splitk_cleanE     0.0195  151.31 1984.07
+    256 96 2112 7168 False torch.bfloat16 torch.bfloat16    False        False     asm       8       6 16.4247 _ZN5aiter39bf16gemm_fp32bf16_tn_96x64_splitk_cleanE     0.0180  176.97 1951.90
+[aiter] Dropping 5 duplicate rows during merge of 'bf16_tuned_gemm':
+ cu_num  M    N    K  bias          dtype       outdtype  scaleAB  bpreshuffle libtype  solidx  splitK      us                                          kernelName  err_ratio  tflops      bw
+    256 32 2112 7168 False torch.bfloat16 torch.bfloat16    False        False     asm       1       6 14.2940 _ZN5aiter39bf16gemm_fp32bf16_tn_32x64_splitk_cleanE     0.0189   67.78 2159.76
+    256 48 2112 7168 False torch.bfloat16 torch.bfloat16    False        False     asm       3       6 14.8295 _ZN5aiter39bf16gemm_fp32bf16_tn_48x64_splitk_cleanE     0.0181   98.00 2101.79
+    256 64 2112 7168 False torch.bfloat16 torch.bfloat16    False        False     asm       5       6 15.3187 _ZN5aiter39bf16gemm_fp32bf16_tn_64x64_splitk_cleanE     0.0180  126.50 2054.06
+    256 80 2112 7168 False torch.bfloat16 torch.bfloat16    False        False     asm       8       7 16.0087 _ZN5aiter39bf16gemm_fp32bf16_tn_96x64_splitk_cleanE     0.0195  151.31 1984.07
+    256 96 2112 7168 False torch.bfloat16 torch.bfloat16    False        False     asm       8       6 16.4247 _ZN5aiter39bf16gemm_fp32bf16_tn_96x64_splitk_cleanE     0.0180  176.97 1951.90
+[atom 07:23:46] Use MLAAttentionImplDecoratorForPluginMode to decorate MLAAttention
+[atom 07:23:46] Use MLAAttentionImplDecoratorForPluginMode to decorate MLAAttention
+[aiter] Dropping 5 duplicate rows during merge of 'bf16_tuned_gemm':
+ cu_num  M    N    K  bias          dtype       outdtype  scaleAB  bpreshuffle libtype  solidx  splitK      us                                          kernelName  err_ratio  tflops      bw
+    256 32 2112 7168 False torch.bfloat16 torch.bfloat16    False        False     asm       1       6 14.2940 _ZN5aiter39bf16gemm_fp32bf16_tn_32x64_splitk_cleanE     0.0189   67.78 2159.76
+    256 48 2112 7168 False torch.bfloat16 torch.bfloat16    False        False     asm       3       6 14.8295 _ZN5aiter39bf16gemm_fp32bf16_tn_48x64_splitk_cleanE     0.0181   98.00 2101.79
+    256 64 2112 7168 False torch.bfloat16 torch.bfloat16    False        False     asm       5       6 15.3187 _ZN5aiter39bf16gemm_fp32bf16_tn_64x64_splitk_cleanE     0.0180  126.50 2054.06
+    256 80 2112 7168 False torch.bfloat16 torch.bfloat16    False        False     asm       8       7 16.0087 _ZN5aiter39bf16gemm_fp32bf16_tn_96x64_splitk_cleanE     0.0195  151.31 1984.07
+    256 96 2112 7168 False torch.bfloat16 torch.bfloat16    False        False     asm       8       6 16.4247 _ZN5aiter39bf16gemm_fp32bf16_tn_96x64_splitk_cleanE     0.0180  176.97 1951.90
+[atom 07:23:46] Use PagedAttentionImplDecoratorForPluginMode to decorate PagedAttentionImpl
+[atom 07:23:46] Use MLAAttentionImplDecoratorForPluginMode to decorate MLAAttention
+[atom 07:23:46] Create lazy wrapper for FusedMoE to change the naming
+[atom 07:23:46] ModelRunner rank=3, dp_rank_local=0, local_device_rank=3, device=cuda:3
+[atom 07:23:46] Use PagedAttentionImplDecoratorForPluginMode to decorate PagedAttentionImpl
+[atom 07:23:46] Use PagedAttentionImplDecoratorForPluginMode to decorate PagedAttentionImpl
+[atom 07:23:46] Create lazy wrapper for FusedMoE to change the naming
+[atom 07:23:46] Create lazy wrapper for FusedMoE to change the naming
+[atom 07:23:46] ModelRunner rank=0, dp_rank_local=0, local_device_rank=0, device=cuda:0
+[atom 07:23:46] ModelRunner rank=1, dp_rank_local=0, local_device_rank=1, device=cuda:1
+[atom 07:23:46] Use PagedAttentionImplDecoratorForPluginMode to decorate PagedAttentionImpl
+[atom 07:23:46] Create lazy wrapper for FusedMoE to change the naming
+[atom 07:23:46] ModelRunner rank=2, dp_rank_local=0, local_device_rank=2, device=cuda:2
+[Gloo] Rank 1 is connected to 3 peer ranks. Expected number of connected peer ranks is : 3
+[Gloo] Rank 0 is connected to 3 peer ranks. Expected number of connected peer ranks is : 3
+[Gloo] Rank 2 is connected to 3 peer ranks. Expected number of connected peer ranks is : 3
+[Gloo] Rank 3 is connected to 3 peer ranks. Expected number of connected peer ranks is : 3
+[Gloo] Rank 0 is connected to 3 peer ranks. Expected number of connected peer ranks is : 3
+[Gloo] Rank 1 is connected to 3 peer ranks. Expected number of connected peer ranks is : 3
+[Gloo] Rank 3 is connected to 3 peer ranks. Expected number of connected peer ranks is : 3
+[Gloo] Rank 2 is connected to 3 peer ranks. Expected number of connected peer ranks is : 3
+[Gloo] Rank 0 is connected to 0 peer ranks. Expected number of connected peer ranks is : 0
+[Gloo] Rank 0 is connected to 0 peer ranks. Expected number of connected peer ranks is : 0
+[Gloo] Rank 0 is connected to 0 peer ranks. Expected number of connected peer ranks is : 0
+[Gloo] Rank 0 is connected to 0 peer ranks. Expected number of connected peer ranks is : 0
+[Gloo] Rank 0 is connected to 0 peer ranks. Expected number of connected peer ranks is : 0
+[Gloo] Rank 0 is connected to 0 peer ranks. Expected number of connected peer ranks is : 0
+[Gloo] Rank 0 is connected to 0 peer ranks. Expected number of connected peer ranks is : 0
+[Gloo] Rank 0 is connected to 0 peer ranks. Expected number of connected peer ranks is : 0
+[Gloo] Rank 0 is connected to 3 peer ranks. Expected number of connected peer ranks is : 3
+[Gloo] Rank 2 is connected to 3 peer ranks. Expected number of connected peer ranks is : 3
+[Gloo] Rank 1 is connected to 3 peer ranks. Expected number of connected peer ranks is : 3
+[Gloo] Rank 3 is connected to 3 peer ranks. Expected number of connected peer ranks is : 3
+[atom 07:23:55] disable_mmap: False
+[atom 07:23:55] disable_mmap: False
+[atom 07:23:55] disable_mmap: False
+[atom 07:23:55] disable_mmap: False
+[atom.model_loader.weight_utils 07:23:56] Using model weights format ['*.safetensors']
+[atom.model_loader.weight_utils 07:23:56] Using model weights format ['*.safetensors']
+[atom.model_loader.weight_utils 07:23:56] Using model weights format ['*.safetensors']
+[atom.model_loader.weight_utils 07:23:56] Using model weights format ['*.safetensors']
+Loading safetensors shards[amd/MiniMax-M2.5-MXFP4]:   0%|          | 0/26 [00:00<?, ?it/s]Loading safetensors shards[amd/MiniMax-M2.5-MXFP4]:   4%|▍         | 1/26 [00:00<00:24,  1.02it/s]Loading safetensors shards[amd/MiniMax-M2.5-MXFP4]:   8%|▊         | 2/26 [00:01<00:11,  2.08it/s]Loading safetensors shards[amd/MiniMax-M2.5-MXFP4]:  12%|█▏        | 3/26 [00:02<00:19,  1.20it/s]Loading safetensors shards[amd/MiniMax-M2.5-MXFP4]:  15%|█▌        | 4/26 [00:03<00:21,  1.03it/s]Loading safetensors shards[amd/MiniMax-M2.5-MXFP4]:  19%|█▉        | 5/26 [00:05<00:25,  1.20s/it]Loading safetensors shards[amd/MiniMax-M2.5-MXFP4]:  23%|██▎       | 6/26 [00:06<00:23,  1.19s/it]Loading safetensors shards[amd/MiniMax-M2.5-MXFP4]:  27%|██▋       | 7/26 [00:07<00:22,  1.19s/it]Loading safetensors shards[amd/MiniMax-M2.5-MXFP4]:  31%|███       | 8/26 [00:08<00:20,  1.16s/it]Loading safetensors shards[amd/MiniMax-M2.5-MXFP4]:  35%|███▍      | 9/26 [00:09<00:18,  1.06s/it]Loading safetensors shards[amd/MiniMax-M2.5-MXFP4]:  38%|███▊      | 10/26 [00:10<00:17,  1.08s/it]Loading safetensors shards[amd/MiniMax-M2.5-MXFP4]:  42%|████▏     | 11/26 [00:12<00:18,  1.26s/it]Loading safetensors shards[amd/MiniMax-M2.5-MXFP4]:  46%|████▌     | 12/26 [00:13<00:16,  1.21s/it]Loading safetensors shards[amd/MiniMax-M2.5-MXFP4]:  50%|█████     | 13/26 [00:14<00:14,  1.15s/it]Loading safetensors shards[amd/MiniMax-M2.5-MXFP4]:  54%|█████▍    | 14/26 [00:15<00:13,  1.13s/it]Loading safetensors shards[amd/MiniMax-M2.5-MXFP4]:  58%|█████▊    | 15/26 [00:16<00:12,  1.15s/it]Loading safetensors shards[amd/MiniMax-M2.5-MXFP4]:  62%|██████▏   | 16/26 [00:17<00:11,  1.11s/it]Loading safetensors shards[amd/MiniMax-M2.5-MXFP4]:  65%|██████▌   | 17/26 [00:19<00:10,  1.22s/it]Loading safetensors shards[amd/MiniMax-M2.5-MXFP4]:  69%|██████▉   | 18/26 [00:20<00:09,  1.18s/it]Loading safetensors shards[amd/MiniMax-M2.5-MXFP4]:  73%|███████▎  | 19/26 [00:21<00:08,  1.17s/it]Loading safetensors shards[amd/MiniMax-M2.5-MXFP4]:  77%|███████▋  | 20/26 [00:22<00:07,  1.19s/it]Loading safetensors shards[amd/MiniMax-M2.5-MXFP4]:  81%|████████  | 21/26 [00:23<00:05,  1.14s/it]Loading safetensors shards[amd/MiniMax-M2.5-MXFP4]:  85%|████████▍ | 22/26 [00:24<00:04,  1.02s/it]Loading safetensors shards[amd/MiniMax-M2.5-MXFP4]:  88%|████████▊ | 23/26 [00:25<00:03,  1.04s/it]Loading safetensors shards[amd/MiniMax-M2.5-MXFP4]:  92%|█████████▏| 24/26 [00:26<00:02,  1.06s/it]Loading safetensors shards[amd/MiniMax-M2.5-MXFP4]:  96%|█████████▌| 25/26 [00:27<00:01,  1.06s/it]Loading safetensors shards[amd/MiniMax-M2.5-MXFP4]: 100%|██████████| 26/26 [00:29<00:00,  1.23s/it]Loading safetensors shards[amd/MiniMax-M2.5-MXFP4]: 100%|██████████| 26/26 [00:29<00:00,  1.12s/it]
+[atom 07:24:26] Model load done: amd/MiniMax-M2.5-MXFP4
+[atom 07:24:27] Model load done: amd/MiniMax-M2.5-MXFP4
+[atom 07:24:27] Model load done: amd/MiniMax-M2.5-MXFP4
+[atom 07:24:28] Model load done: amd/MiniMax-M2.5-MXFP4
+[atom 07:24:32] Using cache directory: /root/.cache/atom/torch_compile_cache/c537fea4ad/rank_0/backbone for vLLM's torch.compile
+[atom 07:24:32] Dynamo bytecode transform time: 6.30 s
+[atom 07:24:33] Using cache directory: /root/.cache/atom/torch_compile_cache/c537fea4ad/rank_2/backbone for vLLM's torch.compile
+[atom 07:24:33] Dynamo bytecode transform time: 6.42 s
+[atom 07:24:34] Using cache directory: /root/.cache/atom/torch_compile_cache/c537fea4ad/rank_1/backbone for vLLM's torch.compile
+[atom 07:24:34] Dynamo bytecode transform time: 6.36 s
+[atom 07:24:35] Using cache directory: /root/.cache/atom/torch_compile_cache/c537fea4ad/rank_3/backbone for vLLM's torch.compile
+[atom 07:24:35] Dynamo bytecode transform time: 6.43 s
+[atom 07:24:45] Directly load the compiled graph(s) for dynamic shape from the cache, took 11.462 s
+[atom 07:24:46] Directly load the compiled graph(s) for dynamic shape from the cache, took 11.494 s
+[atom 07:24:46] Directly load the compiled graph(s) for dynamic shape from the cache, took 11.697 s
+[atom 07:24:47] Directly load the compiled graph(s) for dynamic shape from the cache, took 11.460 s
+[aiter] type hints mismatch, override to --> ck_moe_stage1(hidden_states: torch.Tensor, w1: torch.Tensor, w2: torch.Tensor, sorted_token_ids: torch.Tensor, sorted_expert_ids: torch.Tensor, num_valid_ids: torch.Tensor, out: torch.Tensor, topk: int, kernelName: str = None, w1_scale: Optional[torch.Tensor] = None, a1_scale: Optional[torch.Tensor] = None, block_m: Optional[int] = 32, sorted_weights: Optional[torch.Tensor] = None, quant_type: int = 0, activation: int = 0, splitk: Optional[int] = 1, non_temporal_load: bool = False, dst_type: Optional[str] = None, is_shuffled: bool = True) -> None
+[aiter] type hints mismatch, override to --> ck_moe_stage2(inter_states: torch.Tensor, w1: torch.Tensor, w2: torch.Tensor, sorted_token_ids: torch.Tensor, sorted_expert_ids: torch.Tensor, num_valid_ids: torch.Tensor, out: torch.Tensor, topk: int, kernelName: str = None, w2_scale: Optional[torch.Tensor] = None, a2_scale: Optional[torch.Tensor] = None, block_m: Optional[int] = 32, sorted_weights: Optional[torch.Tensor] = None, quant_type: int = 0, activation: int = 0, splitk: Optional[int] = 1, non_temporal_load: bool = False, dst_type: Optional[str] = None, is_shuffled: bool = True) -> None
+[aiter] type hints mismatch, override to --> ck_moe_stage1(hidden_states: torch.Tensor, w1: torch.Tensor, w2: torch.Tensor, sorted_token_ids: torch.Tensor, sorted_expert_ids: torch.Tensor, num_valid_ids: torch.Tensor, out: torch.Tensor, topk: int, kernelName: str = None, w1_scale: Optional[torch.Tensor] = None, a1_scale: Optional[torch.Tensor] = None, block_m: Optional[int] = 32, sorted_weights: Optional[torch.Tensor] = None, quant_type: int = 0, activation: int = 0, splitk: Optional[int] = 1, non_temporal_load: bool = False, dst_type: Optional[str] = None, is_shuffled: bool = True) -> None
+[aiter] type hints mismatch, override to --> ck_moe_stage2(inter_states: torch.Tensor, w1: torch.Tensor, w2: torch.Tensor, sorted_token_ids: torch.Tensor, sorted_expert_ids: torch.Tensor, num_valid_ids: torch.Tensor, out: torch.Tensor, topk: int, kernelName: str = None, w2_scale: Optional[torch.Tensor] = None, a2_scale: Optional[torch.Tensor] = None, block_m: Optional[int] = 32, sorted_weights: Optional[torch.Tensor] = None, quant_type: int = 0, activation: int = 0, splitk: Optional[int] = 1, non_temporal_load: bool = False, dst_type: Optional[str] = None, is_shuffled: bool = True) -> None
+[aiter] type hints mismatch, override to --> ck_moe_stage1(hidden_states: torch.Tensor, w1: torch.Tensor, w2: torch.Tensor, sorted_token_ids: torch.Tensor, sorted_expert_ids: torch.Tensor, num_valid_ids: torch.Tensor, out: torch.Tensor, topk: int, kernelName: str = None, w1_scale: Optional[torch.Tensor] = None, a1_scale: Optional[torch.Tensor] = None, block_m: Optional[int] = 32, sorted_weights: Optional[torch.Tensor] = None, quant_type: int = 0, activation: int = 0, splitk: Optional[int] = 1, non_temporal_load: bool = False, dst_type: Optional[str] = None, is_shuffled: bool = True) -> None
+[aiter] type hints mismatch, override to --> ck_moe_stage2(inter_states: torch.Tensor, w1: torch.Tensor, w2: torch.Tensor, sorted_token_ids: torch.Tensor, sorted_expert_ids: torch.Tensor, num_valid_ids: torch.Tensor, out: torch.Tensor, topk: int, kernelName: str = None, w2_scale: Optional[torch.Tensor] = None, a2_scale: Optional[torch.Tensor] = None, block_m: Optional[int] = 32, sorted_weights: Optional[torch.Tensor] = None, quant_type: int = 0, activation: int = 0, splitk: Optional[int] = 1, non_temporal_load: bool = False, dst_type: Optional[str] = None, is_shuffled: bool = True) -> None
+[aiter] type hints mismatch, override to --> ck_moe_stage1(hidden_states: torch.Tensor, w1: torch.Tensor, w2: torch.Tensor, sorted_token_ids: torch.Tensor, sorted_expert_ids: torch.Tensor, num_valid_ids: torch.Tensor, out: torch.Tensor, topk: int, kernelName: str = None, w1_scale: Optional[torch.Tensor] = None, a1_scale: Optional[torch.Tensor] = None, block_m: Optional[int] = 32, sorted_weights: Optional[torch.Tensor] = None, quant_type: int = 0, activation: int = 0, splitk: Optional[int] = 1, non_temporal_load: bool = False, dst_type: Optional[str] = None, is_shuffled: bool = True) -> None
+[aiter] type hints mismatch, override to --> ck_moe_stage2(inter_states: torch.Tensor, w1: torch.Tensor, w2: torch.Tensor, sorted_token_ids: torch.Tensor, sorted_expert_ids: torch.Tensor, num_valid_ids: torch.Tensor, out: torch.Tensor, topk: int, kernelName: str = None, w2_scale: Optional[torch.Tensor] = None, a2_scale: Optional[torch.Tensor] = None, block_m: Optional[int] = 32, sorted_weights: Optional[torch.Tensor] = None, quant_type: int = 0, activation: int = 0, splitk: Optional[int] = 1, non_temporal_load: bool = False, dst_type: Optional[str] = None, is_shuffled: bool = True) -> None
+[atom 07:25:16] Model Runner2/4: warmup_model 49.60 seconds with 1 reqs 16384 tokens
+[atom 07:25:16] Model warmup done: amd/MiniMax-M2.5-MXFP4
+[atom 07:25:16] Memory budget: total_gpu=287.98GB, free=233.01GB, utilization=0.9, budget=259.19GB, peak_torch=40.36GB, cudagraph_est=0.16GB, safety=5.76GB, available_for_kv=212.90GB, block_bytes=523776, num_kvcache_blocks=436445
+[atom 07:25:16] Model Runner3/4: warmup_model 48.36 seconds with 1 reqs 16384 tokens
+[atom 07:25:16] Model warmup done: amd/MiniMax-M2.5-MXFP4
+[atom 07:25:16] Model Runner1/4: warmup_model 49.09 seconds with 1 reqs 16384 tokens
+[atom 07:25:16] Model warmup done: amd/MiniMax-M2.5-MXFP4
+[atom 07:25:16] Memory budget: total_gpu=287.98GB, free=233.29GB, utilization=0.9, budget=259.19GB, peak_torch=40.36GB, cudagraph_est=0.16GB, safety=5.76GB, available_for_kv=212.90GB, block_bytes=523776, num_kvcache_blocks=436445
+[atom 07:25:16] Model Runner0/4: warmup_model 50.48 seconds with 1 reqs 16384 tokens
+[atom 07:25:16] Memory budget: total_gpu=287.98GB, free=232.92GB, utilization=0.9, budget=259.19GB, peak_torch=40.36GB, cudagraph_est=0.16GB, safety=5.76GB, available_for_kv=212.90GB, block_bytes=523776, num_kvcache_blocks=436445
+[atom 07:25:16] Model warmup done: amd/MiniMax-M2.5-MXFP4
+[atom 07:25:16] Memory budget: total_gpu=287.98GB, free=232.86GB, utilization=0.9, budget=259.19GB, peak_torch=40.36GB, cudagraph_est=0.16GB, safety=5.76GB, available_for_kv=212.90GB, block_bytes=523776, num_kvcache_blocks=436445
+[atom 07:25:16] Binding KV cache for target model starting at layer_id=0
+[atom 07:25:16] Binding KV cache for target model starting at layer_id=0
+[atom 07:25:16] Binding KV cache for target model starting at layer_id=0
+[atom 07:25:16] Binding KV cache for target model starting at layer_id=0
+/opt/venv/lib/python3.12/site-packages/torch/distributed/distributed_c10d.py:4876: UserWarning: barrier(): using the device under current context. You can specify `device_id` in `init_process_group` to mute this warning.
+  warnings.warn(  # warn only once
+[rank0]:[W412 07:25:16.723324347 ProcessGroupNCCL.cpp:5074] Guessing device ID based on global rank. This can cause a hang if rank to GPU mapping is heterogeneous. You can specify device_id in init_process_group()
+  0%|          | 0/10 [00:00<?, ?it/s]Capturing bs=256, max_q_len=1:   0%|          | 0/10 [00:00<?, ?it/s]Capturing bs=256, max_q_len=1:  10%|█         | 1/10 [00:00<00:05,  1.68it/s]Capturing bs=128, max_q_len=1:  10%|█         | 1/10 [00:00<00:05,  1.68it/s]Capturing bs=64, max_q_len=1:  10%|█         | 1/10 [00:00<00:05,  1.68it/s] Capturing bs=64, max_q_len=1:  30%|███       | 3/10 [00:00<00:01,  4.55it/s]Capturing bs=48, max_q_len=1:  30%|███       | 3/10 [00:00<00:01,  4.55it/s]Capturing bs=32, max_q_len=1:  30%|███       | 3/10 [00:00<00:01,  4.55it/s]Capturing bs=32, max_q_len=1:  50%|█████     | 5/10 [00:01<00:00,  5.54it/s]Capturing bs=16, max_q_len=1:  50%|█████     | 5/10 [00:01<00:00,  5.54it/s]Capturing bs=8, max_q_len=1:  50%|█████     | 5/10 [00:01<00:00,  5.54it/s] Capturing bs=8, max_q_len=1:  70%|███████   | 7/10 [00:01<00:00,  5.04it/s]Capturing bs=4, max_q_len=1:  70%|███████   | 7/10 [00:01<00:00,  5.04it/s]Capturing bs=4, max_q_len=1:  80%|████████  | 8/10 [00:01<00:00,  5.08it/s]Capturing bs=2, max_q_len=1:  80%|████████  | 8/10 [00:01<00:00,  5.08it/s]Capturing bs=1, max_q_len=1:  80%|████████  | 8/10 [00:01<00:00,  5.08it/s]Capturing bs=1, max_q_len=1: 100%|██████████| 10/10 [00:02<00:00,  4.24it/s]Capturing bs=1, max_q_len=1: 100%|██████████| 10/10 [00:02<00:00,  4.38it/s]
+[atom 07:25:20] Post-init memory: actual=269.84GB (93.7%), target=259.19GB (90%)
+[atom 07:25:20] Actual GPU memory usage (93.7%) exceeds target (90%) by 3.7%. Consider reducing gpu_memory_utilization.
+[atom 07:25:20] Post-init memory: actual=269.30GB (93.5%), target=259.19GB (90%)
+[atom 07:25:20] Actual GPU memory usage (93.5%) exceeds target (90%) by 3.5%. Consider reducing gpu_memory_utilization.
+[atom 07:25:20] Engine Core: cudagraph capture[1, 2, 4, 8, 16, 32, 48, 64, 128, 256] cost: 2.31 seconds
+[atom 07:25:20] Post-init memory: actual=269.80GB (93.7%), target=259.19GB (90%)
+[atom 07:25:20] Engine Core: load model runner success
+[atom 07:25:20] Actual GPU memory usage (93.7%) exceeds target (90%) by 3.7%. Consider reducing gpu_memory_utilization.
+[atom 07:25:20] Post-init memory: actual=269.68GB (93.6%), target=259.19GB (90%)
+[atom 07:25:20] Actual GPU memory usage (93.6%) exceeds target (90%) by 3.6%. Consider reducing gpu_memory_utilization.
+[atom 07:25:21] Engine Core: EngineCore fully initialized and ready
+[atom 07:25:21] Engine Core Mgr: DP rank 0 is fully initialized and ready
+[atom 07:25:21] Engine Core Mgr: All EngineCores are fully initialized and ready
+[atom 07:25:21] Engine Core Mgr: All 1 EngineCores initialized and ready
+[atom 07:25:21] LLMEngine init with 1 data parallel ranks
+[atom 07:25:21] Starting server on 0.0.0.0:8002...
+INFO:     Started server process [2247772]
+INFO:     Waiting for application startup.
+[atom 07:25:21] Server started successfully and ready to accept requests
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8002 (Press CTRL+C to quit)
+INFO:     127.0.0.1:35214 - "GET /v1/models HTTP/1.1" 200 OK
+[atom 07:25:40] Request 0 arrived, input tokens: 7237, pending requests: 1 
+[atom 07:25:40] API: Created request_id=cmpl-44851bf2a60a47f7ad4d6beac5ad2f82, seq_id=0, queue=True
+INFO:     127.0.0.1:43510 - "POST /v1/completions HTTP/1.1" 200 OK
+[atom 07:25:40] Engine Core: put 1 reqs to scheduler
+[atom 07:25:40] Scheduled prefill batch: 1 reqs, 7237 token_nums: [7237], req_ids: (0,)
+[aiter] type hints mismatch, override to --> fmha_v3_varlen_fwd(q: torch.Tensor, k: torch.Tensor, v: torch.Tensor, cu_seqlens_q: torch.Tensor, cu_seqlens_k: torch.Tensor, max_seqlen_q: int, max_seqlen_k: int, min_seqlen_q: int, dropout_p: float, softmax_scale: float, logits_soft_cap: float, zero_tensors: bool, is_causal: bool, window_size_left: int, window_size_right: int, return_softmax_lse: bool, return_dropout_randval: bool, how_v3_bf16_cvt: int, out: Optional[torch.Tensor] = None, block_table: Optional[torch.Tensor] = None, bias: Optional[torch.Tensor] = None, alibi_slopes: Optional[torch.Tensor] = None, q_descale: Optional[torch.Tensor] = None, k_descale: Optional[torch.Tensor] = None, v_descale: Optional[torch.Tensor] = None, gen: Optional[torch.Generator] = None, cu_seqlens_q_padded: Optional[torch.Tensor] = None, cu_seqlens_k_padded: Optional[torch.Tensor] = None) -> List[torch.Tensor]
+[aiter] type hints mismatch, override to --> fmha_v3_varlen_fwd(q: torch.Tensor, k: torch.Tensor, v: torch.Tensor, cu_seqlens_q: torch.Tensor, cu_seqlens_k: torch.Tensor, max_seqlen_q: int, max_seqlen_k: int, min_seqlen_q: int, dropout_p: float, softmax_scale: float, logits_soft_cap: float, zero_tensors: bool, is_causal: bool, window_size_left: int, window_size_right: int, return_softmax_lse: bool, return_dropout_randval: bool, how_v3_bf16_cvt: int, out: Optional[torch.Tensor] = None, block_table: Optional[torch.Tensor] = None, bias: Optional[torch.Tensor] = None, alibi_slopes: Optional[torch.Tensor] = None, q_descale: Optional[torch.Tensor] = None, k_descale: Optional[torch.Tensor] = None, v_descale: Optional[torch.Tensor] = None, gen: Optional[torch.Generator] = None, cu_seqlens_q_padded: Optional[torch.Tensor] = None, cu_seqlens_k_padded: Optional[torch.Tensor] = None) -> List[torch.Tensor]
+[aiter] type hints mismatch, override to --> fmha_v3_varlen_fwd(q: torch.Tensor, k: torch.Tensor, v: torch.Tensor, cu_seqlens_q: torch.Tensor, cu_seqlens_k: torch.Tensor, max_seqlen_q: int, max_seqlen_k: int, min_seqlen_q: int, dropout_p: float, softmax_scale: float, logits_soft_cap: float, zero_tensors: bool, is_causal: bool, window_size_left: int, window_size_right: int, return_softmax_lse: bool, return_dropout_randval: bool, how_v3_bf16_cvt: int, out: Optional[torch.Tensor] = None, block_table: Optional[torch.Tensor] = None, bias: Optional[torch.Tensor] = None, alibi_slopes: Optional[torch.Tensor] = None, q_descale: Optional[torch.Tensor] = None, k_descale: Optional[torch.Tensor] = None, v_descale: Optional[torch.Tensor] = None, gen: Optional[torch.Generator] = None, cu_seqlens_q_padded: Optional[torch.Tensor] = None, cu_seqlens_k_padded: Optional[torch.Tensor] = None) -> List[torch.Tensor]
+[aiter] type hints mismatch, override to --> fmha_v3_varlen_fwd(q: torch.Tensor, k: torch.Tensor, v: torch.Tensor, cu_seqlens_q: torch.Tensor, cu_seqlens_k: torch.Tensor, max_seqlen_q: int, max_seqlen_k: int, min_seqlen_q: int, dropout_p: float, softmax_scale: float, logits_soft_cap: float, zero_tensors: bool, is_causal: bool, window_size_left: int, window_size_right: int, return_softmax_lse: bool, return_dropout_randval: bool, how_v3_bf16_cvt: int, out: Optional[torch.Tensor] = None, block_table: Optional[torch.Tensor] = None, bias: Optional[torch.Tensor] = None, alibi_slopes: Optional[torch.Tensor] = None, q_descale: Optional[torch.Tensor] = None, k_descale: Optional[torch.Tensor] = None, v_descale: Optional[torch.Tensor] = None, gen: Optional[torch.Generator] = None, cu_seqlens_q_padded: Optional[torch.Tensor] = None, cu_seqlens_k_padded: Optional[torch.Tensor] = None) -> List[torch.Tensor]
+[atom 07:25:45] Engine Core: output send 1 reqs
+[atom 07:25:45] Profiling started
+INFO:     127.0.0.1:58292 - "POST /start_profile HTTP/1.1" 200 OK
+[atom 07:25:45] Request 1 arrived, input tokens: 7237, pending requests: 1 
+[atom 07:25:45] API: Created request_id=cmpl-d2b6cdfad23746f989c1a3e6937da998, seq_id=1, queue=True
+INFO:     127.0.0.1:58302 - "POST /v1/completions HTTP/1.1" 200 OK
+[atom 07:25:45] Engine Core: put 1 reqs to scheduler
+[atom 07:25:45] Scheduled prefill batch: 1 reqs, 7237 token_nums: [7237], req_ids: (1,)
+[atom 07:25:52] Engine Core: output send 1 reqs
+[atom 07:25:52] Request 2 arrived, input tokens: 7112, pending requests: 1 
+[atom 07:25:52] API: Created request_id=cmpl-c5f780d0c370446c97e92fca22d90dac, seq_id=2, queue=True
+INFO:     127.0.0.1:58304 - "POST /v1/completions HTTP/1.1" 200 OK
+[atom 07:25:52] Engine Core: put 1 reqs to scheduler
+[atom 07:25:52] Scheduled prefill batch: 1 reqs, 7112 token_nums: [7112], req_ids: (2,)
+[atom 07:25:58] Engine Core: output send 1 reqs
+[atom 07:25:58] Request 3 arrived, input tokens: 7769, pending requests: 1 
+[atom 07:25:58] API: Created request_id=cmpl-26b4af6bb37a4f56b00132c4a47bf2aa, seq_id=3, queue=True
+INFO:     127.0.0.1:46042 - "POST /v1/completions HTTP/1.1" 200 OK
+[atom 07:25:58] Engine Core: put 1 reqs to scheduler
+[atom 07:25:58] Scheduled prefill batch: 1 reqs, 7769 token_nums: [7769], req_ids: (3,)
+[atom 07:26:04] Engine Core: output send 1 reqs
+[atom 07:26:04] Request 4 arrived, input tokens: 7388, pending requests: 1 
+[atom 07:26:04] API: Created request_id=cmpl-752d597b2ee6421cad238ea5dfd4a1c0, seq_id=4, queue=True
+INFO:     127.0.0.1:54678 - "POST /v1/completions HTTP/1.1" 200 OK
+[atom 07:26:04] Engine Core: put 1 reqs to scheduler
+[atom 07:26:04] Scheduled prefill batch: 1 reqs, 7388 token_nums: [7388], req_ids: (4,)
+[atom 07:26:10] Engine Core: output send 1 reqs
+[atom 07:26:10] Request 5 arrived, input tokens: 7316, pending requests: 1 
+[atom 07:26:10] API: Created request_id=cmpl-a3470f7c357549fb9e6c912f61644926, seq_id=5, queue=True
+INFO:     127.0.0.1:54692 - "POST /v1/completions HTTP/1.1" 200 OK
+[atom 07:26:10] Engine Core: put 1 reqs to scheduler
+[atom 07:26:10] Scheduled prefill batch: 1 reqs, 7316 token_nums: [7316], req_ids: (5,)
+[atom 07:26:16] Engine Core: output send 1 reqs
+INFO:     127.0.0.1:40264 - "POST /stop_profile HTTP/1.1" 200 OK
+[atom 07:26:16] Profiler stopping...
+[rank1]:[W412 07:26:16.487821737 collection.cpp:1133] Warning: ROCTracer produced duplicate flow start: 1 (function operator())
+[rank2]:[W412 07:26:16.492174626 collection.cpp:1133] Warning: ROCTracer produced duplicate flow start: 1 (function operator())
+[rank0]:[W412 07:26:16.492287775 collection.cpp:1133] Warning: ROCTracer produced duplicate flow start: 1 (function operator())
+[rank3]:[W412 07:26:16.492972799 collection.cpp:1133] Warning: ROCTracer produced duplicate flow start: 1 (function operator())
+[atom 07:26:19] Profiler stopped.
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+[atom 07:26:51] Server shutting down, releasing resources...
+[atom 07:26:51] Engine Core Mgr: Shutting down all 1 EngineCores
+[atom 07:26:56] AsyncIOProcManager(ModelRunner): received signal 15 (SIGTERM), exiting...
+[atom 07:26:56] AsyncIOProcManager(ModelRunner): shutdown all runners...
+[atom 07:26:57] AsyncIOProcManager(ModelRunner): All runners are shutdown.
+[atom 07:26:57] Engine Core Mgr: All EngineCores shut down
+INFO:     Application shutdown complete.
+INFO:     Finished server process [2247772]

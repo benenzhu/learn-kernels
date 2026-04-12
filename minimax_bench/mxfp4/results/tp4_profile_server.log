@@ -1,0 +1,278 @@
+[atom 06:36:56] Loading tokenizer from amd/MiniMax-M2.5-MXFP4...
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+[atom 06:36:58] Initializing engine with model amd/MiniMax-M2.5-MXFP4...
+`torch_dtype` is deprecated! Use `dtype` instead!
+[atom 06:36:59] Engine Core Mgr: Creating EngineCore for DP rank 0/1
+[atom 06:36:59] Creating EngineCore process: DP rank 0, will use GPUs 0 to 3
+[atom 06:36:59] Engine Core Mgr: Starting EngineCore for DP rank 0/1
+[aiter] Dropping 5 duplicate rows during merge of 'bf16_tuned_gemm':
+ cu_num  M    N    K  bias          dtype       outdtype  scaleAB  bpreshuffle libtype  solidx  splitK      us                                          kernelName  err_ratio  tflops      bw
+    256 32 2112 7168 False torch.bfloat16 torch.bfloat16    False        False     asm       1       6 14.2940 _ZN5aiter39bf16gemm_fp32bf16_tn_32x64_splitk_cleanE     0.0189   67.78 2159.76
+    256 48 2112 7168 False torch.bfloat16 torch.bfloat16    False        False     asm       3       6 14.8295 _ZN5aiter39bf16gemm_fp32bf16_tn_48x64_splitk_cleanE     0.0181   98.00 2101.79
+    256 64 2112 7168 False torch.bfloat16 torch.bfloat16    False        False     asm       5       6 15.3187 _ZN5aiter39bf16gemm_fp32bf16_tn_64x64_splitk_cleanE     0.0180  126.50 2054.06
+    256 80 2112 7168 False torch.bfloat16 torch.bfloat16    False        False     asm       8       7 16.0087 _ZN5aiter39bf16gemm_fp32bf16_tn_96x64_splitk_cleanE     0.0195  151.31 1984.07
+    256 96 2112 7168 False torch.bfloat16 torch.bfloat16    False        False     asm       8       6 16.4247 _ZN5aiter39bf16gemm_fp32bf16_tn_96x64_splitk_cleanE     0.0180  176.97 1951.90
+[atom 06:37:07] Use MLAAttentionImplDecoratorForPluginMode to decorate MLAAttention
+[aiter] Dropping 5 duplicate rows during merge of 'bf16_tuned_gemm':
+ cu_num  M    N    K  bias          dtype       outdtype  scaleAB  bpreshuffle libtype  solidx  splitK      us                                          kernelName  err_ratio  tflops      bw
+    256 32 2112 7168 False torch.bfloat16 torch.bfloat16    False        False     asm       1       6 14.2940 _ZN5aiter39bf16gemm_fp32bf16_tn_32x64_splitk_cleanE     0.0189   67.78 2159.76
+    256 48 2112 7168 False torch.bfloat16 torch.bfloat16    False        False     asm       3       6 14.8295 _ZN5aiter39bf16gemm_fp32bf16_tn_48x64_splitk_cleanE     0.0181   98.00 2101.79
+    256 64 2112 7168 False torch.bfloat16 torch.bfloat16    False        False     asm       5       6 15.3187 _ZN5aiter39bf16gemm_fp32bf16_tn_64x64_splitk_cleanE     0.0180  126.50 2054.06
+    256 80 2112 7168 False torch.bfloat16 torch.bfloat16    False        False     asm       8       7 16.0087 _ZN5aiter39bf16gemm_fp32bf16_tn_96x64_splitk_cleanE     0.0195  151.31 1984.07
+    256 96 2112 7168 False torch.bfloat16 torch.bfloat16    False        False     asm       8       6 16.4247 _ZN5aiter39bf16gemm_fp32bf16_tn_96x64_splitk_cleanE     0.0180  176.97 1951.90
+[atom 06:37:07] Use MLAAttentionImplDecoratorForPluginMode to decorate MLAAttention
+[atom 06:37:07] Use PagedAttentionImplDecoratorForPluginMode to decorate PagedAttentionImpl
+[atom 06:37:07] Create lazy wrapper for FusedMoE to change the naming
+[aiter] Dropping 5 duplicate rows during merge of 'bf16_tuned_gemm':
+ cu_num  M    N    K  bias          dtype       outdtype  scaleAB  bpreshuffle libtype  solidx  splitK      us                                          kernelName  err_ratio  tflops      bw
+    256 32 2112 7168 False torch.bfloat16 torch.bfloat16    False        False     asm       1       6 14.2940 _ZN5aiter39bf16gemm_fp32bf16_tn_32x64_splitk_cleanE     0.0189   67.78 2159.76
+    256 48 2112 7168 False torch.bfloat16 torch.bfloat16    False        False     asm       3       6 14.8295 _ZN5aiter39bf16gemm_fp32bf16_tn_48x64_splitk_cleanE     0.0181   98.00 2101.79
+    256 64 2112 7168 False torch.bfloat16 torch.bfloat16    False        False     asm       5       6 15.3187 _ZN5aiter39bf16gemm_fp32bf16_tn_64x64_splitk_cleanE     0.0180  126.50 2054.06
+    256 80 2112 7168 False torch.bfloat16 torch.bfloat16    False        False     asm       8       7 16.0087 _ZN5aiter39bf16gemm_fp32bf16_tn_96x64_splitk_cleanE     0.0195  151.31 1984.07
+    256 96 2112 7168 False torch.bfloat16 torch.bfloat16    False        False     asm       8       6 16.4247 _ZN5aiter39bf16gemm_fp32bf16_tn_96x64_splitk_cleanE     0.0180  176.97 1951.90
+[atom 06:37:07] Use MLAAttentionImplDecoratorForPluginMode to decorate MLAAttention
+[atom 06:37:07] ModelRunner rank=0, dp_rank_local=0, local_device_rank=0, device=cuda:0
+[atom 06:37:07] Use PagedAttentionImplDecoratorForPluginMode to decorate PagedAttentionImpl
+[atom 06:37:07] Create lazy wrapper for FusedMoE to change the naming
+[atom 06:37:07] ModelRunner rank=2, dp_rank_local=0, local_device_rank=2, device=cuda:2
+[aiter] Dropping 5 duplicate rows during merge of 'bf16_tuned_gemm':
+ cu_num  M    N    K  bias          dtype       outdtype  scaleAB  bpreshuffle libtype  solidx  splitK      us                                          kernelName  err_ratio  tflops      bw
+    256 32 2112 7168 False torch.bfloat16 torch.bfloat16    False        False     asm       1       6 14.2940 _ZN5aiter39bf16gemm_fp32bf16_tn_32x64_splitk_cleanE     0.0189   67.78 2159.76
+    256 48 2112 7168 False torch.bfloat16 torch.bfloat16    False        False     asm       3       6 14.8295 _ZN5aiter39bf16gemm_fp32bf16_tn_48x64_splitk_cleanE     0.0181   98.00 2101.79
+    256 64 2112 7168 False torch.bfloat16 torch.bfloat16    False        False     asm       5       6 15.3187 _ZN5aiter39bf16gemm_fp32bf16_tn_64x64_splitk_cleanE     0.0180  126.50 2054.06
+    256 80 2112 7168 False torch.bfloat16 torch.bfloat16    False        False     asm       8       7 16.0087 _ZN5aiter39bf16gemm_fp32bf16_tn_96x64_splitk_cleanE     0.0195  151.31 1984.07
+    256 96 2112 7168 False torch.bfloat16 torch.bfloat16    False        False     asm       8       6 16.4247 _ZN5aiter39bf16gemm_fp32bf16_tn_96x64_splitk_cleanE     0.0180  176.97 1951.90
+[atom 06:37:07] Use MLAAttentionImplDecoratorForPluginMode to decorate MLAAttention
+[atom 06:37:08] Use PagedAttentionImplDecoratorForPluginMode to decorate PagedAttentionImpl
+[atom 06:37:08] Create lazy wrapper for FusedMoE to change the naming
+[atom 06:37:08] ModelRunner rank=1, dp_rank_local=0, local_device_rank=1, device=cuda:1
+[atom 06:37:08] Use PagedAttentionImplDecoratorForPluginMode to decorate PagedAttentionImpl
+[atom 06:37:08] Create lazy wrapper for FusedMoE to change the naming
+[atom 06:37:08] ModelRunner rank=3, dp_rank_local=0, local_device_rank=3, device=cuda:3
+[Gloo] Rank 0 is connected to 3 peer ranks. Expected number of connected peer ranks is : 3
+[Gloo] Rank 1 is connected to 3 peer ranks. Expected number of connected peer ranks is : 3
+[Gloo] Rank 3 is connected to 3 peer ranks. Expected number of connected peer ranks is : 3
+[Gloo] Rank 2 is connected to 3 peer ranks. Expected number of connected peer ranks is : 3
+[Gloo] Rank 3 is connected to 3 peer ranks. Expected number of connected peer ranks is : 3
+[Gloo] Rank 0 is connected to 3 peer ranks. Expected number of connected peer ranks is : 3
+[Gloo] Rank 2 is connected to 3 peer ranks. Expected number of connected peer ranks is : 3
+[Gloo] Rank 1 is connected to 3 peer ranks. Expected number of connected peer ranks is : 3
+[Gloo] Rank 0 is connected to 0 peer ranks. Expected number of connected peer ranks is : 0
+[Gloo] Rank 0 is connected to 0 peer ranks. Expected number of connected peer ranks is : 0
+[Gloo] Rank 0 is connected to 0 peer ranks. Expected number of connected peer ranks is : 0
+[Gloo] Rank 0 is connected to 0 peer ranks. Expected number of connected peer ranks is : 0
+[Gloo] Rank 0 is connected to 0 peer ranks. Expected number of connected peer ranks is : 0
+[Gloo] Rank 0 is connected to 0 peer ranks. Expected number of connected peer ranks is : 0
+[Gloo] Rank 0 is connected to 0 peer ranks. Expected number of connected peer ranks is : 0
+[Gloo] Rank 0 is connected to 0 peer ranks. Expected number of connected peer ranks is : 0
+[Gloo] Rank 1 is connected to 3 peer ranks. Expected number of connected peer ranks is : 3
+[Gloo] Rank 0 is connected to 3 peer ranks. Expected number of connected peer ranks is : 3
+[Gloo] Rank 2 is connected to 3 peer ranks. Expected number of connected peer ranks is : 3
+[Gloo] Rank 3 is connected to 3 peer ranks. Expected number of connected peer ranks is : 3
+Process ModelRunner0/4:
+Traceback (most recent call last):
+  File "/usr/lib/python3.12/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.12/multiprocessing/process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+  File "/app/ATOM/atom/model_engine/async_proc.py", line 65, in __init__
+    self.runners.append(runner_class(rank, *args, **kwargs))
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/ATOM/atom/model_engine/model_runner.py", line 577, in __init__
+    self.model = model_class(config)
+                 ^^^^^^^^^^^^^^^^^^^
+  File "/app/ATOM/atom/models/minimax_m2.py", line 437, in __init__
+    self.model = MiniMaxM2Model(
+                 ^^^^^^^^^^^^^^^
+  File "/app/ATOM/atom/utils/decorators.py", line 415, in __init__
+    old_init(self, atom_config=atom_config, **kwargs)
+  File "/app/ATOM/atom/models/minimax_m2.py", line 353, in __init__
+    self.start_layer, self.end_layer, self.layers = make_layers(
+                                                    ^^^^^^^^^^^^
+  File "/app/ATOM/atom/models/utils.py", line 135, in make_layers
+    layer_fn(prefix=f"{prefix}.{idx}", layer_num=layer_num_offset + idx)
+  File "/app/ATOM/atom/models/minimax_m2.py", line 355, in <lambda>
+    lambda prefix, layer_num=None: layer_type(
+                                   ^^^^^^^^^^^
+  File "/app/ATOM/atom/models/minimax_m2.py", line 293, in __init__
+    self.block_sparse_moe = MiniMaxM2SparseMoeBlock(
+                            ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/ATOM/atom/models/minimax_m2.py", line 56, in __init__
+    self.experts = FusedMoE(
+                   ^^^^^^^^^
+  File "/app/ATOM/atom/plugin/moe.py", line 49, in __new__
+    return decorated_cls(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/ATOM/atom/model_ops/moe.py", line 2058, in __init__
+    self.quant_method.create_weights(layer=self, **moe_quant_params)
+  File "/app/ATOM/atom/model_ops/moe.py", line 682, in create_weights
+    torch.empty(
+  File "/opt/venv/lib/python3.12/site-packages/torch/utils/_device.py", line 103, in __torch_function__
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+torch.OutOfMemoryError: HIP out of memory. Tried to allocate 384.00 MiB. GPU 0 has a total capacity of 287.98 GiB of which 0 bytes is free. Of the allocated memory 22.33 GiB is allocated by PyTorch, and 51.66 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)
+Process ModelRunner1/4:
+Traceback (most recent call last):
+  File "/usr/lib/python3.12/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.12/multiprocessing/process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+  File "/app/ATOM/atom/model_engine/async_proc.py", line 65, in __init__
+    self.runners.append(runner_class(rank, *args, **kwargs))
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/ATOM/atom/model_engine/model_runner.py", line 577, in __init__
+    self.model = model_class(config)
+                 ^^^^^^^^^^^^^^^^^^^
+  File "/app/ATOM/atom/models/minimax_m2.py", line 437, in __init__
+    self.model = MiniMaxM2Model(
+                 ^^^^^^^^^^^^^^^
+  File "/app/ATOM/atom/utils/decorators.py", line 415, in __init__
+    old_init(self, atom_config=atom_config, **kwargs)
+  File "/app/ATOM/atom/models/minimax_m2.py", line 353, in __init__
+    self.start_layer, self.end_layer, self.layers = make_layers(
+                                                    ^^^^^^^^^^^^
+  File "/app/ATOM/atom/models/utils.py", line 135, in make_layers
+    layer_fn(prefix=f"{prefix}.{idx}", layer_num=layer_num_offset + idx)
+  File "/app/ATOM/atom/models/minimax_m2.py", line 355, in <lambda>
+    lambda prefix, layer_num=None: layer_type(
+                                   ^^^^^^^^^^^
+  File "/app/ATOM/atom/models/minimax_m2.py", line 267, in __init__
+    self.self_attn = MiniMaxM2Attention(
+                     ^^^^^^^^^^^^^^^^^^^
+  File "/app/ATOM/atom/models/minimax_m2.py", line 152, in __init__
+    self.qkv_proj = QKVParallelLinear(
+                    ^^^^^^^^^^^^^^^^^^
+  File "/app/ATOM/atom/model_ops/linear.py", line 778, in __init__
+    super().__init__(
+  File "/app/ATOM/atom/model_ops/linear.py", line 518, in __init__
+    super().__init__(
+  File "/app/ATOM/atom/model_ops/linear.py", line 259, in __init__
+    torch.empty(weight_size, dtype=params_dtype),
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/venv/lib/python3.12/site-packages/torch/utils/_device.py", line 103, in __torch_function__
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+torch.OutOfMemoryError: HIP out of memory. Tried to allocate 12.00 MiB. GPU 1 has a total capacity of 287.98 GiB of which 0 bytes is free. Of the allocated memory 22.31 GiB is allocated by PyTorch, and 60.67 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)
+Process ModelRunner2/4:
+Traceback (most recent call last):
+  File "/usr/lib/python3.12/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.12/multiprocessing/process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+  File "/app/ATOM/atom/model_engine/async_proc.py", line 65, in __init__
+    self.runners.append(runner_class(rank, *args, **kwargs))
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/ATOM/atom/model_engine/model_runner.py", line 577, in __init__
+    self.model = model_class(config)
+                 ^^^^^^^^^^^^^^^^^^^
+  File "/app/ATOM/atom/models/minimax_m2.py", line 437, in __init__
+    self.model = MiniMaxM2Model(
+                 ^^^^^^^^^^^^^^^
+  File "/app/ATOM/atom/utils/decorators.py", line 415, in __init__
+    old_init(self, atom_config=atom_config, **kwargs)
+  File "/app/ATOM/atom/models/minimax_m2.py", line 353, in __init__
+    self.start_layer, self.end_layer, self.layers = make_layers(
+                                                    ^^^^^^^^^^^^
+  File "/app/ATOM/atom/models/utils.py", line 135, in make_layers
+    layer_fn(prefix=f"{prefix}.{idx}", layer_num=layer_num_offset + idx)
+  File "/app/ATOM/atom/models/minimax_m2.py", line 355, in <lambda>
+    lambda prefix, layer_num=None: layer_type(
+                                   ^^^^^^^^^^^
+  File "/app/ATOM/atom/models/minimax_m2.py", line 293, in __init__
+    self.block_sparse_moe = MiniMaxM2SparseMoeBlock(
+                            ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/ATOM/atom/models/minimax_m2.py", line 56, in __init__
+    self.experts = FusedMoE(
+                   ^^^^^^^^^
+  File "/app/ATOM/atom/plugin/moe.py", line 49, in __new__
+    return decorated_cls(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/ATOM/atom/model_ops/moe.py", line 2058, in __init__
+    self.quant_method.create_weights(layer=self, **moe_quant_params)
+  File "/app/ATOM/atom/model_ops/moe.py", line 682, in create_weights
+    torch.empty(
+  File "/opt/venv/lib/python3.12/site-packages/torch/utils/_device.py", line 103, in __torch_function__
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+torch.OutOfMemoryError: HIP out of memory. Tried to allocate 384.00 MiB. GPU 2 has a total capacity of 287.98 GiB of which 0 bytes is free. Of the allocated memory 22.33 GiB is allocated by PyTorch, and 51.66 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)
+[rank2]:[W412 06:37:22.704932725 TCPStore.cpp:125] [c10d] recvValue failed on SocketImpl(fd=17, addr=[localhost]:34546, remote=[localhost]:47593): Failed to recv, got 0 bytes. Connection was likely closed. Did the remote server shutdown or crash?
+Exception raised from recvBytes at /pytorch/torch/csrc/distributed/c10d/Utils.hpp:682 (most recent call first):
+frame #0: c10::Error::Error(c10::SourceLocation, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >) + 0x88 (0x7f36e4b45978 in /opt/venv/lib/python3.12/site-packages/torch/lib/libc10.so)
+frame #1: <unknown function> + 0x5f54d5e (0x7f3773dbbd5e in /opt/venv/lib/python3.12/site-packages/torch/lib/libtorch_cpu.so)
+frame #2: <unknown function> + 0x5f55b00 (0x7f3773dbcb00 in /opt/venv/lib/python3.12/site-packages/torch/lib/libtorch_cpu.so)
+frame #3: <unknown function> + 0x5f5657a (0x7f3773dbd57a in /opt/venv/lib/python3.12/site-packages/torch/lib/libtorch_cpu.so)
+frame #4: c10d::TCPStore::check(std::vector<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::allocator<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > > const&) + 0x2a9 (0x7f3773db88c9 in /opt/venv/lib/python3.12/site-packages/torch/lib/libtorch_cpu.so)
+frame #5: c10d::ProcessGroupNCCL::HeartbeatMonitor::runLoop() + 0x38b (0x7f375ae8592b in /opt/venv/lib/python3.12/site-packages/torch/lib/libtorch_hip.so)
+frame #6: <unknown function> + 0xecdb4 (0x7f36e2f19db4 in /lib/x86_64-linux-gnu/libstdc++.so.6)
+frame #7: <unknown function> + 0x9caa4 (0x7f37840b4aa4 in /lib/x86_64-linux-gnu/libc.so.6)
+frame #8: <unknown function> + 0x129c6c (0x7f3784141c6c in /lib/x86_64-linux-gnu/libc.so.6)
+
+[rank2]:[W412 06:37:22.709143082 ProcessGroupNCCL.cpp:1773] [PG ID 0 PG GUID 0 Rank 2] Failed to check the "should dump" flag on TCPStore, (maybe TCPStore server has shut down too early), with error: Failed to recv, got 0 bytes. Connection was likely closed. Did the remote server shutdown or crash?
+Process ModelRunner3/4:
+Traceback (most recent call last):
+  File "/usr/lib/python3.12/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.12/multiprocessing/process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+  File "/app/ATOM/atom/model_engine/async_proc.py", line 65, in __init__
+    self.runners.append(runner_class(rank, *args, **kwargs))
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/ATOM/atom/model_engine/model_runner.py", line 577, in __init__
+    self.model = model_class(config)
+                 ^^^^^^^^^^^^^^^^^^^
+  File "/app/ATOM/atom/models/minimax_m2.py", line 437, in __init__
+    self.model = MiniMaxM2Model(
+                 ^^^^^^^^^^^^^^^
+  File "/app/ATOM/atom/utils/decorators.py", line 415, in __init__
+    old_init(self, atom_config=atom_config, **kwargs)
+  File "/app/ATOM/atom/models/minimax_m2.py", line 353, in __init__
+    self.start_layer, self.end_layer, self.layers = make_layers(
+                                                    ^^^^^^^^^^^^
+  File "/app/ATOM/atom/models/utils.py", line 135, in make_layers
+    layer_fn(prefix=f"{prefix}.{idx}", layer_num=layer_num_offset + idx)
+  File "/app/ATOM/atom/models/minimax_m2.py", line 355, in <lambda>
+    lambda prefix, layer_num=None: layer_type(
+                                   ^^^^^^^^^^^
+  File "/app/ATOM/atom/models/minimax_m2.py", line 293, in __init__
+    self.block_sparse_moe = MiniMaxM2SparseMoeBlock(
+                            ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/ATOM/atom/models/minimax_m2.py", line 56, in __init__
+    self.experts = FusedMoE(
+                   ^^^^^^^^^
+  File "/app/ATOM/atom/plugin/moe.py", line 49, in __new__
+    return decorated_cls(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/ATOM/atom/model_ops/moe.py", line 2058, in __init__
+    self.quant_method.create_weights(layer=self, **moe_quant_params)
+  File "/app/ATOM/atom/model_ops/moe.py", line 682, in create_weights
+    torch.empty(
+  File "/opt/venv/lib/python3.12/site-packages/torch/utils/_device.py", line 103, in __torch_function__
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+torch.OutOfMemoryError: HIP out of memory. Tried to allocate 384.00 MiB. GPU 3 has a total capacity of 287.98 GiB of which 0 bytes is free. Of the allocated memory 22.95 GiB is allocated by PyTorch, and 59.65 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)
+[atom 06:37:24] AsyncIOProcManager(ModelRunner): [ModelRunner2/4] proc died unexpectedly, shutting down.
+[atom 06:37:24] AsyncIOProcManager(ModelRunner): shutdown all runners...
+[atom 06:37:26] AsyncIOProcManager(ModelRunner): All runners are shutdown.
+[atom 06:37:26] Engine Core: load model runner failed
+[atom 06:37:26] Engine Core Mgr: Failed to initialize all EngineCores, cleaning up: Engine Core Mgr: Received unexpected SHUTDOWN signal from DP rank 0 during initialization
+[atom 06:37:26] Engine Core Mgr: Shutting down all 1 EngineCores
+[atom 06:37:27] Engine Core Mgr: All EngineCores shut down
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/app/ATOM/atom/entrypoints/openai_server.py", line 961, in <module>
+    main()
+  File "/app/ATOM/atom/entrypoints/openai_server.py", line 924, in main
+    engine = engine_args.create_engine(tokenizer=tokenizer)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/ATOM/atom/model_engine/arg_utils.py", line 226, in create_engine
+    return LLMEngine(self.model, tokenizer=tokenizer, **self._get_engine_kwargs())
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/ATOM/atom/model_engine/llm_engine.py", line 55, in __init__
+    self.core_mgr = CoreManager(config)
+                    ^^^^^^^^^^^^^^^^^^^
+  File "/app/ATOM/atom/model_engine/engine_core_mgr.py", line 120, in __init__
+    self._wait_for_all_ready_signals()
+  File "/app/ATOM/atom/model_engine/engine_core_mgr.py", line 187, in _wait_for_all_ready_signals
+    raise RuntimeError(
+RuntimeError: Engine Core Mgr: Received unexpected SHUTDOWN signal from DP rank 0 during initialization
