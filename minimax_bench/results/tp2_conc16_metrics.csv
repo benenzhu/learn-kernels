@@ -1,0 +1,2 @@
+config,tag,num_requests,duration_s,total_input_tokens,total_output_tokens,req_throughput,output_tok_throughput,total_tok_throughput,ttft_mean,ttft_p50,ttft_p99,tpot_mean,tpot_p50,tpot_p99,itl_mean,itl_p50,itl_p99,e2el_mean,e2el_p50,e2el_p99
+"TP=2, Conc=16",tp2_conc16,160,120.27,1175032,73187,1.33,608.52,10378.46,552.23,319.68,3531.54,24.77,25.25,28.15,24.76,17.51,244.24,11878.07,11799.01,15507.65
