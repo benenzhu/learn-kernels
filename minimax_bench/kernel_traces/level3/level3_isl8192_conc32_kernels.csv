@@ -1,0 +1,39 @@
+kernel,count,total_us,avg_us,pct
+aiter::fmoe_bf16_blockscaleFp8_g1u1_vs_silu_32x384,1054,3319190,3149.1,36.2
+ck::kernel_moe_gemm<ck::GridwiseMoeGemmBlockScale<ck::tensor_layout::gemm::RowMa,20631,1467065,71.1,16.0
+ck::kernel_gemm_xdl_cshuffle_v3_multi_d_blockscale_b_preshuffle<ck::GridwiseGemm,22246,954585,42.9,10.4
+aiter::fmha_fwd_hd128_bf16_causal_group,1054,946162,897.7,10.3
+aiter::pa_bf16_pertokenFp8_gqa8_2tg_4w,10317,485200,47.0,5.3
+"aiter::mix_sample_outer_exponential_kernel<std::bfloat16_t, 1024, 64, 4, true>(s",189,328364,1737.4,3.6
+_ZN5aiter37dynamic_per_group_scaled_quant_kernelIDF16bDB8_Li32EEEvPT0_PfPKT_PKfi,44430,307488,6.9,3.4
+"aiter::add_rmsnorm_quant_kernel<std::bfloat16_t, std::bfloat16_t, 256, 16, true,",22739,202712,8.9,2.2
+_ZN7ck_tile6kentryINS_11kernel_attrILb1EEELi1ENS_15QuantGemmKernelINS_21GemmTile,496,137989,278.2,1.5
+_ZN5aiter45reshape_and_cache_with_per_token_quant_kernelIDF16bDB8_fLb1ELi64EEEvP,11371,107823,9.5,1.2
+"aiter::kn_entry_2c_sbhd_cached_indirect_inplace<aiter::OpCachedFwd, 0, true, fal",11371,106253,9.3,1.2
+triton_red_fused__to_copy_add_mean_mul_pow_rsqrt_split_with_sizes_1,11371,105221,9.3,1.1
+"ck_tile::kentry<2, ck_tile::MoeSortingKernel<ck_tile::MoeSortingProblemEx<int, f",10317,104195,10.1,1.1
+Cijk_Alik_Bljk_S_B_Bias_HA_S_SAV_UserArgs_MT16x16x512_MI16x16x1_SN_LDSB1_AFC0_AF,7651,92737,12.1,1.0
+triton_poi_fused__to_copy_0,11371,89098,7.8,1.0
+"aiter::grouped_topk_kernel<float, float __vector(4), 1, true, true, false>(float",11371,85999,7.6,0.9
+triton_red_fused__to_copy_add_mean_mul_pow_rsqrt_split_with_sizes_2,11371,70069,6.2,0.8
+Cijk_Alik_Bljk_S_B_Bias_HA_S_SAV_UserArgs_MT128x128x64_MI16x16x1_SN_LDSB1_AFC0_A,248,49234,198.5,0.5
+Cijk_Alik_Bljk_S_B_Bias_HA_S_SAV_UserArgs_MT128x64x64_MI16x16x1_SN_LDSB1_AFC0_AF,496,46082,92.9,0.5
+Cijk_Alik_Bljk_S_B_Bias_HA_S_SAV_UserArgs_MT64x224x64_MI16x16x1_SN_LDSB1_AFC0_AF,248,42310,170.6,0.5
+Cijk_Alik_Bljk_S_B_Bias_HA_S_SAV_UserArgs_MT16x16x64_MI16x16x1_SN_LDSB0_AFC0_AFE,2666,32408,12.2,0.4
+"ck_tile::kentry<2, ck_tile::MoeSortingMultiPhaseKernel_P23<ck_tile::MoeSortingPr",1054,26568,25.2,0.3
+Cijk_Alik_Bljk_BBS_BH_Bias_HA_S_SAV_UserArgs_MT64x16x512_MI16x16x1_SN_LDSB1_AFC0,123,24272,197.3,0.3
+Cijk_Alik_Bljk_BBS_BH_Bias_HA_S_SAV_UserArgs_MT32x16x256_MI16x16x1_SN_LDSB1_AFC0,53,10176,192.0,0.1
+"ck_tile::kentry<256, ck_tile::MoeSortingMultiPhaseKernel_P0_v1<ck_tile::MoeSorti",1054,5749,5.5,0.1
+"ck_tile::kentry<2, ck_tile::MoeSortingClearWorkspaceKernel<ck_tile::MoeSortingCl",1054,5738,5.4,0.1
+"ck_tile::kentry<2, ck_tile::MoeSortingMultiPhaseKernel_P1<ck_tile::MoeSortingPro",1054,5731,5.4,0.1
+Cijk_Alik_Bljk_S_B_Bias_HA_S_SAV_UserArgs_MT32x224x64_MI16x16x1_SN_LDSB1_AFC0_AF,62,5247,84.6,0.1
+triton_poi_fused_embedding_0,188,1371,7.3,0.0
+Cijk_Alik_Bljk_BBS_BH_Bias_HA_S_SAV_UserArgs_MT32x16x512_MI16x16x1_SN_LDSB1_AFC0,7,1310,187.2,0.0
+"aiter::add_rmsnorm_quant_kernel<std::bfloat16_t, std::bfloat16_t, 256, 16, false",188,1289,6.9,0.0
+__amd_rocclr_copyBuffer,166,1022,6.2,0.0
+kv_indices_generate_kernel,171,892,5.2,0.0
+"at::native::_scatter_gather_elementwise_kernel<256, 4, at::native::_cuda_scatter",27,116,4.3,0.0
+"at::native::elementwise_kernel_manual_unroll<128, 4, at::native::gpu_kernel_impl",17,92,5.4,0.0
+"at::native::unrolled_elementwise_kernel<at::native::CUDAFunctorOnSelf_add<int>, ",17,92,5.4,0.0
+"at::native::index_elementwise_kernel<128, 4, at::native::gpu_index_kernel<at::na",9,54,6.0,0.0
+"at::native::vectorized_gather_kernel<16, long>(char*, char*, long*, int, long, l",8,45,5.6,0.0

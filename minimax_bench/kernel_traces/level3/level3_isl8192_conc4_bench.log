@@ -1,0 +1,39 @@
+[aiter] import [module_aiter_enum] under /app/aiter-test/aiter/jit/module_aiter_enum.so
+Namespace(backend='vllm', base_url='http://localhost:8200', host='127.0.0.1', port=8000, endpoint='/v1/completions', dataset_name='random', dataset_path=None, max_concurrency=4, model='MiniMaxAI/MiniMax-M2.5', tokenizer=None, best_of=1, use_beam_search=False, num_prompts=50, logprobs=None, request_rate=inf, burstiness=1.0, seed=0, trust_remote_code=False, disable_tqdm=False, profile=True, save_result=True, save_detailed=False, metadata=None, result_dir='minimax_bench/kernel_traces/level3', result_filename=None, ignore_eos=True, percentile_metrics='ttft,tpot,itl', metric_percentiles='99', goodput=None, sonnet_input_len=550, sonnet_output_len=150, sonnet_prefix_len=200, sharegpt_output_len=None, random_input_len=8192, random_output_len=50, random_range_ratio=0.8, random_prefix_len=0, use_chat_template=False, hf_subset=None, hf_split=None, hf_output_len=None, tokenizer_mode='auto', served_model_name=None, lora_modules=None, num_warmups=1)
+-------------------  Input/Output Length Statistics  -------------------
+ input_lens : min=6625  max=8177  mean=7311.72  avg_token_mismatch=0.00  
+ output_lens: min=40    max=50    mean=44.94   
+------------------------------------------------------------------------ 
+
+Starting initial single prompt test run...
+Warming up with 1 requests...
+  0%|          | 0/1 [00:00<?, ?it/s]100%|██████████| 1/1 [00:00<00:00,  1.33it/s]100%|██████████| 1/1 [00:00<00:00,  1.33it/s]
+Warmup completed.
+Starting profiler...
+Traffic request rate: inf
+Burstiness factor: 1.0 (Poisson process)
+Maximum request concurrency: 4
+  0%|          | 0/50 [00:00<?, ?it/s]  2%|▏         | 1/50 [00:01<01:16,  1.57s/it]  8%|▊         | 4/50 [00:02<00:23,  1.96it/s] 10%|█         | 5/50 [00:03<00:26,  1.70it/s] 12%|█▏        | 6/50 [00:03<00:22,  1.99it/s] 16%|█▌        | 8/50 [00:04<00:17,  2.44it/s] 18%|█▊        | 9/50 [00:04<00:20,  1.99it/s] 20%|██        | 10/50 [00:05<00:18,  2.21it/s] 26%|██▌       | 13/50 [00:06<00:16,  2.24it/s] 28%|██▊       | 14/50 [00:06<00:15,  2.30it/s] 34%|███▍      | 17/50 [00:08<00:14,  2.32it/s] 40%|████      | 20/50 [00:08<00:10,  2.73it/s] 42%|████▏     | 21/50 [00:09<00:12,  2.31it/s] 44%|████▍     | 22/50 [00:09<00:10,  2.68it/s] 46%|████▌     | 23/50 [00:10<00:09,  2.89it/s] 48%|████▊     | 24/50 [00:10<00:09,  2.63it/s] 50%|█████     | 25/50 [00:11<00:11,  2.10it/s] 54%|█████▍    | 27/50 [00:11<00:08,  2.56it/s] 56%|█████▌    | 28/50 [00:12<00:08,  2.63it/s] 58%|█████▊    | 29/50 [00:12<00:09,  2.11it/s] 62%|██████▏   | 31/50 [00:13<00:07,  2.45it/s] 66%|██████▌   | 33/50 [00:14<00:07,  2.25it/s] 70%|███████   | 35/50 [00:15<00:05,  2.52it/s] 74%|███████▍  | 37/50 [00:16<00:05,  2.30it/s] 78%|███████▊  | 39/50 [00:16<00:04,  2.53it/s] 82%|████████▏ | 41/50 [00:17<00:03,  2.32it/s] 86%|████████▌ | 43/50 [00:18<00:02,  2.49it/s] 90%|█████████ | 45/50 [00:19<00:02,  2.38it/s] 94%|█████████▍| 47/50 [00:20<00:01,  2.60it/s] 98%|█████████▊| 49/50 [00:20<00:00,  2.92it/s]100%|██████████| 50/50 [00:20<00:00,  2.42it/s]
+Starting main benchmark run...
+Stopping profiler...
+============ Serving Benchmark Result ============
+Successful requests:                     50        
+Benchmark duration (s):                  20.64     
+Total input tokens:                      365586    
+Total generated tokens:                  2247      
+Request throughput (req/s):              2.42      
+Output token throughput (tok/s):         108.84    
+Total Token throughput (tok/s):          17817.47  
+---------------Time to First Token----------------
+Mean TTFT (ms):                          441.86    
+Median TTFT (ms):                        372.71    
+P99 TTFT (ms):                           860.50    
+-----Time per Output Token (excl. 1st token)------
+Mean TPOT (ms):                          26.96     
+Median TPOT (ms):                        26.56     
+P99 TPOT (ms):                           37.76     
+---------------Inter-token Latency----------------
+Mean ITL (ms):                           26.40     
+Median ITL (ms):                         15.24     
+P99 ITL (ms):                            408.83    
+==================================================
