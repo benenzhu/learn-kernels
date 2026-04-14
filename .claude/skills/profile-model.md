@@ -29,6 +29,7 @@ git clone https://github.com/benenzhu/bench_serving.git
 
 # Run benchmark with profiling:
 python bench_serving/1_bench.py \
+  --model <MODEL_NAME> \
   --isl 1024 \
   --osl 50 \
   --conc-start 4 \
@@ -39,6 +40,7 @@ python bench_serving/1_bench.py \
 
 # ISL=8192:
 python bench_serving/1_bench.py \
+  --model <MODEL_NAME> \
   --isl 8192 \
   --osl 50 \
   --conc-start 4 \
