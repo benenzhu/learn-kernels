@@ -7,27 +7,11 @@ Profile an LLM with ATOM, extract all GPU kernels, and generate kernel inventory
 User asks to profile/trace a model, wants to know what kernels are used,
 or wants to understand the inference pipeline of a model.
 
-## Two Profiling Modes
+## Profiling Workflow
 
-### Mode 1: Offline (single request, see raw kernels)
-
-```bash
-ATOM_PROFILER_MORE=1 python -m atom.examples.profile_offline \
-  --model <MODEL_NAME> \
-  --enforce-eager \
-  --level 0 \
-  --torch-profiler-dir <OUTPUT_DIR> \
-  --kv_cache_dtype fp8 \
-  --tensor-parallel-size <TP>
-```
-
-Good for: understanding what kernels exist, getting call stacks, raw kernel inventory.
-Bad for: realistic perf numbers (bs=1 only, no batching).
-
-### Mode 2: Server + bench_serving --profile (realistic concurrency)
+### 1. Start server with profiler enabled
 
 ```bash
-# 1. Start server with --torch-profiler-dir
 python -m atom.entrypoints.openai_server \
   --model <MODEL_NAME> \
   --kv_cache_dtype fp8 \
@@ -35,41 +19,44 @@ python -m atom.entrypoints.openai_server \
   --torch-profiler-dir <OUTPUT_DIR> \
   --max-num-seqs <MAX_BATCH>          # SERVER-SIDE batch limit!
   --server-port 8200
-
-# 2. Run benchmark with --profile (auto start/stop profiler)
-python -m atom.benchmarks.benchmark_serving \
-  --model=<MODEL_NAME> \
-  --base-url=http://localhost:8200 \
-  --dataset-name=random \
-  --random-input-len=1024 \
-  --random-output-len=50 \
-  --random-range-ratio=0.8 \
-  --num-prompts=50 \
-  --max-concurrency=<CONC> \
-  --request-rate=inf \
-  --ignore-eos \
-  --profile
 ```
 
-Good for: realistic kernel times under actual batching/concurrency.
+### 2. Run bench_serving with --profile
+
+```bash
+# Clone bench tool (if not already):
+git clone https://github.com/benenzhu/bench_serving.git
+
+# Run benchmark:
+python bench_serving/1_bench.py \
+  --isl 1024 \
+  --osl 50 \
+  --num_prompts_mul=1
+```
+
+For ISL=8192:
+```bash
+python bench_serving/1_bench.py \
+  --isl 8192 \
+  --osl 50 \
+  --num_prompts_mul=1
+```
 
 ## CRITICAL: Client vs Server Concurrency
 
 ```
---max-concurrency=N  (bench_serving)  = CLIENT-side semaphore only!
-  - Limits how many requests the client has in-flight
-  - Does NOT limit server-side batch size
-  - With rate=inf, all requests are queued on server immediately
-  - Server scheduler batches freely → decode bs >> concurrency
-
 --max-num-seqs=N  (server)  = SERVER-side batch limit
   - Controls actual max decode batch size
   - Use this to get controlled batch sizes for profiling
   - Example: --max-num-seqs 4 → decode bs <= 4
 
+Client-side --max-concurrency is just a semaphore!
+  - Does NOT limit server-side batch size
+  - With rate=inf, all requests are queued on server immediately
+  - Server scheduler batches freely → decode bs >> concurrency
+
 To profile with exact batch sizes:
   Server: --max-num-seqs=<DESIRED_BS>
-  Client: --max-concurrency=<DESIRED_BS> --num-prompts=<DESIRED_BS>
 ```
 
 ### Verify batch sizes in trace
@@ -117,7 +104,7 @@ rocm-smi --showmeminfo vram | grep "Used"
 
 ```python
 import gzip, json
-from collections import Counter, defaultdict
+from collections import defaultdict
 
 with gzip.open('trace.json.gz', 'rt') as f:
     trace = json.load(f)
@@ -136,36 +123,6 @@ for name, data in sorted(kernel_dur.items(), key=lambda x: -x[1]["total_us"]):
     avg = data["total_us"] / data["count"]
     pct = data["total_us"] / total * 100
     print(f"{data['count']:>6}x  {avg:>8.1f} us  ({pct:>5.1f}%)  {name}")
-```
-
-## Call Stack Reconstruction (requires ATOM_PROFILER_MORE=1)
-
-```python
-import bisect
-
-# Get python_function events on main thread
-py_funcs = [ev for ev in trace['traceEvents']
-            if ev.get('cat') == 'python_function' and ev.get('ph') == 'X']
-py_funcs.sort(key=lambda x: x['ts'])
-py_starts = [p['ts'] for p in py_funcs]
-py_ends = [p['ts'] + p.get('dur', 0) for p in py_funcs]
-
-# Map kernel → cpu_op via External id
-cpuop_by_extid = {}
-for ev in trace['traceEvents']:
-    if ev.get('cat') == 'cpu_op':
-        ext_id = ev.get('args', {}).get('External id')
-        if ext_id: cpuop_by_extid[ext_id] = ev
-
-def find_stack(ts, max_depth=15):
-    idx = bisect.bisect_right(py_starts, ts)
-    stack = []
-    for i in range(idx-1, max(0, idx-2000), -1):
-        if py_starts[i] <= ts <= py_ends[i]:
-            stack.append(py_funcs[i]['name'])
-        if len(stack) >= max_depth: break
-    stack.reverse()
-    return stack
 ```
 
 ## Kernel Categorization Template
@@ -195,7 +152,7 @@ def find_stack(ts, max_depth=15):
 | `--max-num-seqs` | 512 | Max decode batch size → affects GEMM M dimension |
 | `--max-num-batched-tokens` | 16384 | Max prefill tokens per step → affects prefill GEMM M |
 | `--level` | 3 | 0=raw kernels, 3=fused+CUDA graph |
-| `--kv_cache_dtype` | auto | fp8 → PA reads FP8 cache, adds quant kernels |
+| `--kv_cache_dtype` | fp8 | PA reads FP8 cache, adds quant kernels |
 | `--enforce-eager` | false | true=no CUDA graph (but still torch.compile) |
 
 ## Output Format
