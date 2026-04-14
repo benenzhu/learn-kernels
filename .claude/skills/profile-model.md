@@ -7,10 +7,11 @@ Profile an LLM with ATOM, extract all GPU kernels, and generate kernel inventory
 User asks to profile/trace a model, wants to know what kernels are used,
 or wants to understand the inference pipeline of a model.
 
-## ATOM Profiling Command
+## Two Profiling Modes
+
+### Mode 1: Offline (single request, see raw kernels)
 
 ```bash
-# Pure eager mode (no torch.compile artifacts, no CUDA graph):
 ATOM_PROFILER_MORE=1 python -m atom.examples.profile_offline \
   --model <MODEL_NAME> \
   --enforce-eager \
@@ -18,23 +19,83 @@ ATOM_PROFILER_MORE=1 python -m atom.examples.profile_offline \
   --torch-profiler-dir <OUTPUT_DIR> \
   --kv_cache_dtype fp8 \
   --tensor-parallel-size <TP>
+```
 
-# Key flags:
-#   --enforce-eager    Disable CUDA graph capture/replay
-#   --level 0          Disable torch.compile (NO_COMPILATION)
-#                      Without this, embedding becomes triton_poi_fused_embedding_0
-#   ATOM_PROFILER_MORE=1  Enable python_function events for call stack reconstruction
-#                         (record_shapes=True, with_stack=True, profile_memory=True)
-#                         WARNING: trace file grows from ~5MB to ~50MB
+Good for: understanding what kernels exist, getting call stacks, raw kernel inventory.
+Bad for: realistic perf numbers (bs=1 only, no batching).
+
+### Mode 2: Server + bench_serving --profile (realistic concurrency)
+
+```bash
+# 1. Start server with --torch-profiler-dir
+python -m atom.entrypoints.openai_server \
+  --model <MODEL_NAME> \
+  --kv_cache_dtype fp8 \
+  -tp <TP> \
+  --torch-profiler-dir <OUTPUT_DIR> \
+  --max-num-seqs <MAX_BATCH>          # SERVER-SIDE batch limit!
+  --server-port 8200
+
+# 2. Run benchmark with --profile (auto start/stop profiler)
+python -m atom.benchmarks.benchmark_serving \
+  --model=<MODEL_NAME> \
+  --base-url=http://localhost:8200 \
+  --dataset-name=random \
+  --random-input-len=1024 \
+  --random-output-len=50 \
+  --random-range-ratio=0.8 \
+  --num-prompts=50 \
+  --max-concurrency=<CONC> \
+  --request-rate=inf \
+  --ignore-eos \
+  --profile
+```
+
+Good for: realistic kernel times under actual batching/concurrency.
+
+## CRITICAL: Client vs Server Concurrency
+
+```
+--max-concurrency=N  (bench_serving)  = CLIENT-side semaphore only!
+  - Limits how many requests the client has in-flight
+  - Does NOT limit server-side batch size
+  - With rate=inf, all requests are queued on server immediately
+  - Server scheduler batches freely → decode bs >> concurrency
+
+--max-num-seqs=N  (server)  = SERVER-side batch limit
+  - Controls actual max decode batch size
+  - Use this to get controlled batch sizes for profiling
+  - Example: --max-num-seqs 4 → decode bs <= 4
+
+To profile with exact batch sizes:
+  Server: --max-num-seqs=<DESIRED_BS>
+  Client: --max-concurrency=<DESIRED_BS> --num-prompts=<DESIRED_BS>
+```
+
+### Verify batch sizes in trace
+
+```python
+# Check actual prefill/decode batch sizes in trace:
+from collections import Counter
+annotations = [ev['name'] for ev in trace['traceEvents']
+               if 'decode' in ev.get('name', '').lower()
+               or 'prefill' in ev.get('name', '').lower()]
+print(Counter(annotations).most_common(20))
+
+# Expected: decode[bs=4 tok=4 d=4] if --max-num-seqs=4
+# Bad sign: decode[bs=29 ...] means server is batching beyond your intent
 ```
 
 ## Compilation Levels
 
 ```
---level 0  NO_COMPILATION     Pure eager, no torch.compile
---level 1  DYNAMO_AS_IS       torch.compile + eager backend
---level 2  DYNAMO_ONCE        torch.compile + Inductor
---level 3  PIECEWISE (default) Piecewise compilation + CUDA graphs
+--level 0  NO_COMPILATION     Pure eager, no torch.compile, no CUDA graph
+--level 3  PIECEWISE (default) torch.compile + CUDA graphs (production mode)
+
+NOTE: --level 0 may crash for some models (e.g., MiniMax-M2.5 TP=1).
+      Some models require torch.compile to work correctly.
+NOTE: --enforce-eager only disables CUDA graphs, NOT torch.compile.
+      Level 0 is the only way to fully disable torch.compile.
 ```
 
 ## GPU Memory Check Before Profiling
@@ -50,25 +111,31 @@ rocm-smi --showmeminfo vram | grep "Used"
 - Location: `<torch_profiler_dir>/rank_0/<model>_ts_<timestamp>.pt.trace.json.gz`
 - Format: Chrome JSON trace (gzip compressed)
 - View in: Perfetto (https://ui.perfetto.dev/) or chrome://tracing
+- Rename after capture: `mv <latest>.json.gz <tag>_trace.json.gz`
 
 ## Kernel Extraction Script
 
 ```python
 import gzip, json
-from collections import Counter
+from collections import Counter, defaultdict
 
 with gzip.open('trace.json.gz', 'rt') as f:
     trace = json.load(f)
 
-kernels = Counter()
+# Extract kernels with duration
+kernel_dur = defaultdict(lambda: {"count": 0, "total_us": 0})
 for ev in trace['traceEvents']:
     if ev.get('cat') == 'kernel':
-        kernels[ev['name']] += 1
+        name = ev['name'].replace('void ', '')[:80]
+        kernel_dur[name]["count"] += 1
+        kernel_dur[name]["total_us"] += ev.get('dur', 0)
 
-# Print unique kernels sorted by count
-for name, cnt in kernels.most_common():
-    short = name.replace('void ', '')[:80]
-    print(f"{cnt:>6}x  {short}")
+# Print sorted by total time
+total = sum(v["total_us"] for v in kernel_dur.values())
+for name, data in sorted(kernel_dur.items(), key=lambda x: -x[1]["total_us"]):
+    avg = data["total_us"] / data["count"]
+    pct = data["total_us"] / total * 100
+    print(f"{data['count']:>6}x  {avg:>8.1f} us  ({pct:>5.1f}%)  {name}")
 ```
 
 ## Call Stack Reconstruction (requires ATOM_PROFILER_MORE=1)
@@ -112,11 +179,24 @@ def find_stack(ts, max_depth=15):
 | Flash Attention | `fmha_fwd_*` | aiter (ASM) |
 | Paged Attention | `pa_bf16_*` | aiter (ASM) |
 | PA Reduce | `wv_splitk_small_*` | aiter |
-| Dense GEMM | `Cijk_*` | rocBLAS |
+| Dense GEMM (BF16) | `Cijk_*` | rocBLAS |
+| Dense GEMM (FP8) | `kernel_gemm_xdl_cshuffle_v3*blockscale` | CK |
+| FP8 Activation Quant | `dynamic_per_group_scaled_quant` | aiter |
 | MoE Gate | `topkGatingSoftmax` | vllm |
 | MoE Sort | `MoeSortingKernel`, `MoeSortingMultiPhase*` | CK (ck_tile) |
-| MoE Expert GEMM | `kernel_moe_gemm` | CK |
+| MoE Expert GEMM (BF16) | `kernel_moe_gemm` | CK |
+| MoE Expert GEMM (FP8) | `fmoe_bf16_blockscaleFp8*` | aiter (fused) |
 | Sampling | `mix_sample_outer_exponential` | aiter |
+
+## Server-Side Parameters That Affect Kernel Behavior
+
+| Parameter | Default | Effect on kernels |
+|-----------|---------|-------------------|
+| `--max-num-seqs` | 512 | Max decode batch size → affects GEMM M dimension |
+| `--max-num-batched-tokens` | 16384 | Max prefill tokens per step → affects prefill GEMM M |
+| `--level` | 3 | 0=raw kernels, 3=fused+CUDA graph |
+| `--kv_cache_dtype` | auto | fp8 → PA reads FP8 cache, adds quant kernels |
+| `--enforce-eager` | false | true=no CUDA graph (but still torch.compile) |
 
 ## Output Format
 
@@ -124,3 +204,4 @@ Generate:
 1. `readme.md` - Overview with architecture params, kernel inventory, time breakdown
 2. `NN_<component>.md` - Per-component docs (embedding, rmsnorm, rope, etc.)
 3. `<model>_source_trace.md` - Full call chain Python → C++ → GPU
+4. `*_kernels.csv` - Per-config kernel CSV (name, count, total_us, avg_us, pct)
