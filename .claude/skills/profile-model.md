@@ -27,20 +27,30 @@ python -m atom.entrypoints.openai_server \
 # Clone bench tool (if not already):
 git clone https://github.com/benenzhu/bench_serving.git
 
-# Run benchmark:
+# Run benchmark with profiling:
 python bench_serving/1_bench.py \
   --isl 1024 \
   --osl 50 \
-  --num_prompts_mul=1
-```
+  --conc-start 4 \
+  --conc-end 32 \
+  --port 8200 \
+  --profile \
+  --num-prompts-mul 1
 
-For ISL=8192:
-```bash
+# ISL=8192:
 python bench_serving/1_bench.py \
   --isl 8192 \
   --osl 50 \
-  --num_prompts_mul=1
+  --conc-start 4 \
+  --conc-end 32 \
+  --port 8200 \
+  --profile \
+  --num-prompts-mul 1
 ```
+
+`--profile` is passed through to benchmark_serving.py which calls
+`/start_profile` and `/stop_profile` server endpoints automatically.
+Each concurrency level produces a separate trace file.
 
 ## CRITICAL: Client vs Server Concurrency
 
