@@ -55,8 +55,11 @@ Each concurrency level produces a separate trace file.
 ### 3. Extract per-layer kernel breakdown
 
 ```bash
+# Auto-detects decode bs, auto-saves conc{bs}_layer.csv
 python bench_serving/2_trace_layer.py <trace.json.gz>
-python bench_serving/2_trace_layer.py <trace.json.gz> --csv output.csv
+
+# With explicit CSV — auto-prepends conc{bs}_ to filename
+python bench_serving/2_trace_layer.py <trace.json.gz> --csv layer.csv
 ```
 
 ## CRITICAL: rocprofiler Ring Buffer

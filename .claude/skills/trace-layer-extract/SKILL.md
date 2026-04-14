@@ -17,11 +17,12 @@ user-invocable: true
 `bench_serving/2_trace_layer.py` — reusable CLI tool.
 
 ```bash
-# Basic usage
-python bench_serving/2_trace_layer.py <trace.json.gz> --layers 62
+# Basic usage — auto-detects decode bs, auto-saves conc{bs}_layer.csv
+python bench_serving/2_trace_layer.py <trace.json.gz>
 
-# With CSV output
-python bench_serving/2_trace_layer.py <trace.json.gz> --layers 62 --csv output.csv
+# With explicit CSV path — auto-prepends conc{bs}_ to filename
+python bench_serving/2_trace_layer.py <trace.json.gz> --csv output.csv
+# → saves as conc32_output.csv (if dominant bs=32)
 
 # Custom PA pattern (e.g. for FlashAttn models)
 python bench_serving/2_trace_layer.py <trace.json.gz> --pa-pattern fmha_fwd
@@ -30,10 +31,12 @@ python bench_serving/2_trace_layer.py <trace.json.gz> --pa-pattern fmha_fwd
 ## How It Works
 
 1. Load all GPU kernel events from trace, sort by timestamp
-2. Find PA kernel indices as layer boundaries (PA appears once per layer)
-3. Determine dominant gap (kernels per layer) via `Counter.most_common`
-4. Keep only layers matching dominant gap (filters out prefill, ramp-up/down)
-5. Compute per-position avg/std/min/max across all matched layers
+2. Detect dominant decode batch size from `decode[bs=N]` annotations
+3. Find PA kernel indices as layer boundaries (PA appears once per layer)
+4. Determine dominant gap (kernels per layer) via `Counter.most_common`
+5. Keep only layers matching dominant gap (filters out prefill, ramp-up/down)
+6. Compute per-position avg/std/min/max across all matched layers
+7. Auto-prefix CSV filename with `conc{dominant_bs}_`
 
 ## 方法: PA-to-PA 切分
 
