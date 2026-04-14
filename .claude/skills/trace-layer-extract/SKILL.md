@@ -12,76 +12,53 @@ user-invocable: true
 
 用户想看 decode 单层的 kernel 序列、对比不同 TP/量化配置下的 per-layer 耗时、做 kernel-level 优化分析。
 
+## Script
+
+`bench_serving/2_trace_layer.py` — reusable CLI tool.
+
+```bash
+# Basic usage
+python bench_serving/2_trace_layer.py <trace.json.gz> --layers 62
+
+# With CSV output
+python bench_serving/2_trace_layer.py <trace.json.gz> --layers 62 --csv output.csv
+
+# Custom PA pattern (e.g. for FlashAttn models)
+python bench_serving/2_trace_layer.py <trace.json.gz> --pa-pattern fmha_fwd
+```
+
+## How It Works
+
+1. Load all GPU kernel events from trace, sort by timestamp
+2. Find PA kernel indices as layer boundaries (PA appears once per layer)
+3. Determine dominant gap (kernels per layer) via `Counter.most_common`
+4. Keep only layers matching dominant gap (filters out prefill, ramp-up/down)
+5. Compute per-position avg/std/min/max across all matched layers
+
 ## 方法: PA-to-PA 切分
 
 Paged Attention kernel (`pa_bf16_pertokenFp8_gqa8`) 每层恰好出现一次，作为 layer boundary anchor。
 
-## 提取脚本
-
-```python
-import json, gzip, statistics
-from collections import defaultdict, Counter
-
-def extract_layer_kernels(trace_path):
-    with gzip.open(trace_path, 'rt') as f:
-        data = json.load(f)
-
-    gpu_kernels = [(ev['ts'], ev['dur'], ev['name'])
-                   for ev in data['traceEvents'] if ev.get('cat') == 'kernel']
-    gpu_kernels.sort()
-    names = [n for _,_,n in gpu_kernels]
-
-    # Find PA positions
-    pa_idx = [i for i, n in enumerate(names) if 'pa_bf16' in n]
-
-    # Dominant gap = kernels per layer
-    gaps = [pa_idx[i+1]-pa_idx[i] for i in range(len(pa_idx)-1)]
-    dominant_gap = Counter(gaps).most_common(1)[0][0]
-
-    # Extract standard layers (matching dominant gap)
-    layers = []
-    for i in range(len(pa_idx)-1):
-        s, e = pa_idx[i], pa_idx[i+1]
-        if e - s == dominant_gap:
-            layers.append([(dur, name) for _, dur, name in gpu_kernels[s:e]])
-
-    # Compute stats per kernel position
-    results = []
-    for pos in range(dominant_gap):
-        durs = [l[pos][0] for l in layers]
-        name = layers[0][pos][1]
-        results.append({
-            'pos': pos, 'name': name,
-            'min': min(durs), 'median': statistics.median(durs),
-            'mean': statistics.mean(durs), 'max': max(durs),
-        })
-
-    return results, len(layers), dominant_gap
-```
-
-## 输出格式
+## Example Output
 
 ```
-Pos     Min     Med    Mean     Max  Kernel
-[0]    38.2    40.5    40.7    44.0  pa_bf16_pertokenFp8_gqa8_2tg_4w
-[1]     4.2     5.0     5.2     7.4  dynamic_per_group_scaled_quant
-...
-                       226.3  TOTAL per layer
-                       14.03  × 62 layers (ms)
+Pos  Kernel                           Avg(us)     Std     Min       Max      %      N
+-------------------------------------------------------------------------------------
+  0  PA (paged_attn)                     14.6     0.8    10.9      18.2   3.5%   2501
+  1  FP8_quant                            5.5     0.5     4.4       7.8   1.3%   2501
+  2  GEMM_FP8 (CK dense)                 16.1     0.5    14.9      18.8   3.9%   2501
+  ...
+ 10  MoE_GEMM (CK)                      180.4    16.3   117.8     231.2  43.9%   2501
+ 12  MoE_GEMM (CK)                       88.5     8.4     5.3     112.8  21.5%   2501
+  ...
+-------------------------------------------------------------------------------------
+     TOTAL per layer                    411.0 us
+     x62 layers                         25.48 ms
 ```
-
-## 适用场景
-
-- level=3 CUDA graph 的运行时 trace (不是 capture_graph trace)
-- Decode 阶段 (prefill 不是固定模式)
-- 需要运行 profiling benchmark 先:
-  ```bash
-  python -m atom.benchmarks.benchmark_serving \
-    --num-prompts=5 --max-concurrency=1 --profile
-  ```
 
 ## 注意事项
 
+- rocprofiler 需 ~2s warmup，前几秒 trace 里无 GPU kernel → 用 `--num-prompts-mul 5+` 确保足够 steady-state 数据
 - Trace 里的 GPU kernel 和 CPU annotation 在不同 PID，不能直接用时间戳关联
-- 前几层和最后几层可能有非标准 kernel 数 (首尾效应)，用 dominant_gap 过滤
+- 前几层和最后几层可能有非标准 kernel 数 (首尾效应)，用 dominant_gap 自动过滤
 - 通信 kernel 波动最大 (max/med ~1.7x)，计算 kernel 很稳定 (max/med ~1.1x)

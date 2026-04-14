@@ -13,68 +13,73 @@
 | Params (est.) | ~229B |
 | Quantization | FP8 (kv_cache_dtype=fp8) |
 | TP | 1 |
+| GPU | 1x MI355X (288GB) |
 | Compilation | Level 3 (PIECEWISE, default) |
 
 ## Throughput Summary
 
-| Concurrency | Req/s | Output tok/s | Total tok/s | Mean TTFT (ms) | Mean TPOT (ms) |
-|-------------|-------|-------------|-------------|----------------|----------------|
-| 4 | 4.73 | 215 | 4,714 | 188 | 13.7 |
-| 8 | 7.68 | 348 | 7,502 | 269 | 16.4 |
-| 16 | 11.17 | 501 | 10,764 | 431 | 20.9 |
-| 32 | 15.39 | 683 | 14,887 | 639 | 30.3 |
+ISL=1024, OSL=50, FP8, single MI355X
 
-ISL=1024, OSL=50, FP8, single MI355X (288GB)
+| Conc | Req/s | Output tok/s | Total tok/s | TTFT (ms) | TPOT (ms) |
+|------|-------|-------------|-------------|-----------|-----------|
+| 4 | 4.94 | 217 | 4,752 | 109 | 16.0 |
+| 8 | 6.92 | 312 | 6,728 | 142 | 22.0 |
+| 16 | 10.16 | 451 | 9,817 | 199 | 30.7 |
+| 32 | 11.90 | 534 | 11,550 | 653 | 44.9 |
+| 64 | 18.08 | 813 | 17,461 | 686 | 63.2 |
 
-## Kernel Inventory (conc=32 trace)
+## Per-Layer Kernel Breakdown (Decode)
 
-Total kernel time: 131 ms, 27 unique kernels
+Extracted via `bench_serving/2_trace_layer.py` using PA-to-PA layer slicing.
 
-| Category | Kernel | Count | Avg (us) | Tot% | Provider |
-|----------|--------|-------|----------|------|----------|
-| **MoE Expert GEMM (FP8)** | `kernel_moe_gemm` (CK blockscale) | 868 | 80.6 | **53.3%** | CK |
-| **Dense GEMM (FP8)** | `kernel_gemm_xdl_cshuffle_v3` blockscale | 868 | 18.1 | **12.0%** | CK |
-| **FP8 Activation Quant** | `dynamic_per_group_scaled_quant_kernel` | 1736 | 5.6 | 7.3% | aiter |
-| **Paged Attention** | `pa_bf16_pertokenFp8_gqa8_2tg_4w` | 434 | 11.2 | 3.7% | aiter (ASM) |
-| **RMSNorm+Quant** | `add_rmsnorm_quant_kernel` | 868 | 5.6 | 3.7% | aiter |
-| **Dense GEMM (BF16)** | `Cijk_Alik_Bljk` (rocBLAS) | 248 | 12.2 | 2.3% | rocBLAS |
-| **MoE Gate** | `grouped_topk_kernel` | 434 | 6.7 | 2.2% | aiter |
-| **RMSNorm (Triton)** | `triton_red_fused_*_rsqrt_split_*` | 868 | 5.6 | 3.6% | Triton |
-| **RoPE** | `kn_entry_2c_sbhd_cached_indirect` | 434 | 5.6 | 1.8% | aiter |
-| **Triton copy** | `triton_poi_fused__to_copy_0` | 434 | 5.5 | 1.8% | Triton |
-| **KV Cache** | `reshape_and_cache_with_per_token_quant` | 434 | 5.5 | 1.8% | aiter |
-| **MoE Sort (Phase 2+3)** | `MoeSortingKernel` | 186 | 10.3-12.0 | 2.7% | CK (ck_tile) |
-| **MoE Sort (MultiPhase)** | `MoeSortingMultiPhaseKernel_P0/P23` | 124 | 5.6 | 0.5% | CK (ck_tile) |
-| **Dense GEMM (BF16, prefill)** | `Cijk_*_BBS_BH` (rocBLAS batched) | 6 | 196.3 | 0.9% | rocBLAS |
-| **Sampling** | `mix_sample_outer_exponential` | 8 | 49.7 | 0.3% | aiter |
-| **Embedding** | `triton_poi_fused_embedding_0` | 7 | 5.5 | 0.0% | Triton |
+### Per-Layer Time vs Concurrency
+
+| Kernel | conc=4 | conc=8 | conc=16 | conc=32 | conc=64 | Trend |
+|--------|-------:|-------:|--------:|--------:|--------:|-------|
+| PA (paged_attn) | 10.2 | 10.6 | 11.3 | 14.6 | 28.6 | scales with KV length |
+| FP8_quant (O-proj) | 5.6 | 5.4 | 5.4 | 5.5 | 17.6 | flat → jump at 64 |
+| GEMM_FP8 (O-proj) | 17.9 | 17.9 | 16.6 | 16.1 | 17.7 | flat |
+| RMSNorm+Quant | 5.6 | 5.6 | 5.6 | 5.6 | 5.6 | flat |
+| Triton_copy | 5.6 | 5.5 | 5.7 | 5.6 | 17.7 | flat → jump at 64 |
+| GEMM_BF16 (shared) | 12.2 | 12.1 | 12.1 | 12.0 | 11.9 | flat |
+| MoE_gate (topk) | 6.7 | 6.8 | 6.7 | 6.7 | 6.8 | flat |
+| MoE_sort | 8.1 | 8.3 | 10.3 | 11.0 | 5.4+17.9 | grows |
+| FP8_quant (MoE) | 5.6 | 5.6 | 5.5 | 5.5 | 5.5 | flat |
+| **MoE_GEMM (gate_up)** | **47.1** | **78.3** | **116.5** | **180.3** | **390.6*** | **linear** |
+| FP8_quant (down) | 5.6 | 5.4 | 5.5 | 5.6 | — | flat |
+| **MoE_GEMM (down)** | **22.5** | **38.0** | **57.5** | **88.5** | **—*** | **linear** |
+| RMSNorm+Quant | 5.5 | 5.5 | 5.5 | 5.5 | 5.5 | flat |
+| FP8_quant (QKV) | 5.6 | 5.4 | 5.4 | 5.5 | 5.6 | flat |
+| GEMM_FP8 (QKV) | 19.2 | 19.2 | 19.4 | 19.5 | 29.7 | flat → grows at 64 |
+| RMSNorm_triton x2 | 11.2 | 11.1 | 11.0 | 11.1 | 11.4 | flat |
+| RoPE | 5.6 | 5.6 | 5.6 | 5.6 | 5.9 | flat |
+| KV_cache_quant | 5.7 | 5.5 | 5.5 | 5.6 | 5.4 | flat |
+| **TOTAL** | **205.6** | **251.8** | **311.3** | **409.8** | **588.7** | |
+
+\* conc=64 uses fused ASM kernel (`fmoe_bf16_blockscaleFp8`) — gate_up+down merged into single 390.6 us kernel (18 kernels/layer vs 19-20)
+
+### MoE GEMM Scaling (dominates layer time)
+
+```
+conc=4:   69.6 us (33.8%) = 47.1 + 22.5
+conc=8:  116.3 us (46.2%) = 78.3 + 38.0
+conc=16: 174.0 us (55.9%) = 116.5 + 57.5
+conc=32: 268.8 us (65.6%) = 180.3 + 88.5
+conc=64: 390.6 us (66.3%) = fused single kernel
+```
+
+MoE GEMM time grows ~linearly with batch size (compute-bound).
+All other kernels remain flat (launch-bound at these small M dimensions).
 
 ## Key Observations
 
-### 1. MoE Expert GEMM dominates (53%)
-`kernel_moe_gemm` (CK blockscale FP8) is the single biggest cost at 80.6 us avg.
-This is the **non-fused** CK path — separate quant + GEMM, not the fused `fmoe_bf16_blockscaleFp8` path seen in TP=2/4.
+1. **MoE GEMM dominates and scales linearly** — 34% of layer at conc=4, 66% at conc=64
+2. **Dense GEMMs are launch-bound** — O-proj (16-18 us) and QKV (19 us) don't change with batch size
+3. **conc=64 switches to fused ASM MoE kernel** — `fmoe_bf16_blockscaleFp8` replaces separate CK `kernel_moe_gemm` calls
+4. **PA scales with KV cache length** — 10.2 us at conc=4 → 28.6 us at conc=64
+5. **TP=1 works** — 229 GB FP8 weights fit in 288 GB VRAM, 813 output tok/s at conc=64
 
-### 2. Dense GEMM uses FP8 CK (12%)
-QKV/O projections use `kernel_gemm_xdl_cshuffle_v3` with blockscale FP8 at 18.1 us avg.
+## Files
 
-### 3. FP8 quant overhead is significant (7.3%)
-`dynamic_per_group_scaled_quant` runs 1736x (2x per layer = before each GEMM pair),
-5.6 us each — small individually but adds up.
-
-### 4. TP=1 works on MI355X
-229 GB FP8 weights fit in 288 GB VRAM with ~59 GB headroom for KV cache.
-Throughput scales linearly with concurrency up to 32.
-
-### 5. Decode batch sizes
-conc=32 trace shows mostly `decode[bs=32]` (40 steps), with some ramp-up/ramp-down.
-Prefill batches up to bs=18 (16368 tokens).
-
-## Trace Files
-
-| Concurrency | Trace file |
-|-------------|-----------|
-| 4 | `kernel_traces/tp1/rank_0/MiniMax-M2.5_ts_20260414_035937_391.pt.trace.json.gz` |
-| 8 | `kernel_traces/tp1/rank_0/MiniMax-M2.5_ts_20260414_035942_824.pt.trace.json.gz` |
-| 16 | `kernel_traces/tp1/rank_0/MiniMax-M2.5_ts_20260414_035948_723.pt.trace.json.gz` |
-| 32 | `kernel_traces/tp1/rank_0/MiniMax-M2.5_ts_20260414_035955_341.pt.trace.json.gz` |
+- `conc{4,8,16,32,64}_layer.csv` — per-layer kernel CSV from `2_trace_layer.py`
+- `kernel_traces/tp1/rank_0/*.json.gz` — raw trace files (not committed)
