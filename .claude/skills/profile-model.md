@@ -12,6 +12,7 @@ or wants to understand the inference pipeline of a model.
 ### 1. Start server with profiler enabled
 
 ```bash
+export OMP_NUM_THREADS=1
 python -m atom.entrypoints.openai_server \
   --model <MODEL_NAME> \
   --kv_cache_dtype fp8 \
