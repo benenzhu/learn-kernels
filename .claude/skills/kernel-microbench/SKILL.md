@@ -1,3 +1,9 @@
+---
+name: kernel-microbench
+description: Single GPU kernel micro-benchmark with roofline analysis
+user-invocable: true
+---
+
 # Kernel Micro-Benchmark Skill
 
 针对单个 GPU kernel 写独立 benchmark，找出最优实现。

@@ -1,3 +1,9 @@
+---
+name: trace-layer-extract
+description: Extract per-layer kernel sequence from ATOM level=3 traces
+user-invocable: true
+---
+
 # Trace Layer Extract Skill
 
 从 ATOM level=3 (CUDA graph) 运行时 trace 中提取 per-decode-layer kernel 序列和统计数据。

@@ -1,3 +1,9 @@
+---
+name: llm-kernel-map
+description: Map complete kernel pipeline for LLM inference (prefill vs decode)
+user-invocable: true
+---
+
 # LLM Kernel Map Skill
 
 Maps out the complete kernel pipeline for LLM inference, identifying prefill vs decode differences.

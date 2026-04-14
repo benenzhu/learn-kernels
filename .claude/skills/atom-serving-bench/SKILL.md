@@ -1,3 +1,9 @@
+---
+name: atom-serving-bench
+description: Launch ATOM server and run throughput benchmark
+user-invocable: true
+---
+
 # ATOM Serving Benchmark Skill
 
 启动 ATOM server 并跑吞吐 benchmark 的完整流程。

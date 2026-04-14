@@ -1,3 +1,9 @@
+---
+name: bench-kernel
+description: CUDA graph replay benchmark + source trace templates
+user-invocable: true
+---
+
 # Bench Kernel Skill
 
 Kernel 性能分析和源码追踪的详细模板与代码片段。

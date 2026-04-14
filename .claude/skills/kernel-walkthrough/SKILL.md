@@ -1,3 +1,9 @@
+---
+name: kernel-walkthrough
+description: Deep kernel source-level walkthrough for aiter/atom/CK stack
+user-invocable: true
+---
+
 # Kernel Walkthrough Skill
 
 Generate a deep source-level walkthrough for a GPU kernel in the aiter/atom/CK stack.

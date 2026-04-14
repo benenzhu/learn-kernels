@@ -1,3 +1,9 @@
+---
+name: profile-model
+description: Profile LLM with ATOM, extract GPU kernels, generate kernel inventory
+user-invocable: true
+---
+
 # Profile Model Skill
 
 Profile an LLM with ATOM, extract all GPU kernels, and generate kernel inventory.
