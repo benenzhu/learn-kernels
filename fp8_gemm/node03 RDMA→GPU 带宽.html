@@ -1,0 +1,581 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>node03 RDMA→GPU 带宽</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;700&display=swap">
+<style>
+/* Layout: single-column engineering memo, 900px column; figures sit on surface panels, wide SVGs scroll inside their own box */
+:root {
+  --bg: #f2f4f5;
+  --surface: #ffffff;
+  --tint: #e7ecef;
+  --ink: #162026;
+  --muted: #56646d;
+  --line: #d4dbdf;
+  --accent: #1d5fa8;
+  --local: #23855f;
+  --root: #a35f00;
+  --socket: #c03f33;
+  --ref: #a3afb6;
+  --font-display: "IBM Plex Sans Condensed", "Noto Sans SC", "PingFang SC", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", "Noto Sans SC", "PingFang SC", system-ui, -apple-system, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1417; --surface: #161d21; --tint: #1d262b; --ink: #e3e9ec; --muted: #96a4ac;
+    --line: #2a353b; --accent: #74a9e6; --local: #4cc394; --root: #e3a447; --socket: #ef7466;
+    --ref: #56636b; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1417; --surface: #161d21; --tint: #1d262b; --ink: #e3e9ec; --muted: #96a4ac;
+  --line: #2a353b; --accent: #74a9e6; --local: #4cc394; --root: #e3a447; --socket: #ef7466;
+  --ref: #56636b; color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 15.5px;
+  line-height: 1.75;
+  -webkit-font-smoothing: antialiased;
+}
+.page { max-width: 900px; margin: 0 auto; padding-inline: 20px; padding-block: 44px 64px; }
+@media (max-width: 480px) { .page { padding-inline: 16px; padding-block: 28px 48px; } }
+
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(28px, 5vw, 40px); line-height: 1.2; font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 22px; line-height: 1.35; font-weight: 700; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+h3 { font-size: 16px; line-height: 1.4; font-weight: 600; }
+p { margin: 0; max-width: 42em; }
+code, .mono { font-family: var(--font-mono); font-size: 0.88em; }
+code { background: var(--tint); padding: 0.1em 0.35em; border-radius: 4px; overflow-wrap: anywhere; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.masthead { display: grid; gap: 14px; }
+.eyebrow { font-family: var(--font-mono); font-size: 12.5px; color: var(--muted); letter-spacing: 0.02em; }
+.lede { font-size: 17px; line-height: 1.7; max-width: 40em; }
+
+.findings { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-block: 30px 34px; }
+@media (max-width: 760px) { .findings { grid-template-columns: 1fr; } }
+.finding { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; display: grid; gap: 8px; align-content: start; min-width: 0; }
+.finding p { font-size: 14.5px; line-height: 1.65; color: var(--muted); }
+.chip { justify-self: start; font-family: var(--font-body); font-size: 12px; font-weight: 600; line-height: 1; padding: 5px 9px; border-radius: 999px; letter-spacing: 0.04em; }
+.chip.done { color: var(--local); background: color-mix(in srgb, var(--local) 14%, transparent); }
+.chip.pending { color: var(--root); background: color-mix(in srgb, var(--root) 16%, transparent); }
+
+section { border-top: 1px solid var(--line); padding-block: 32px; display: grid; gap: 16px; }
+
+.dirs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 24px; margin: 0; }
+@media (max-width: 600px) { .dirs { grid-template-columns: 1fr; } }
+.dirs div { border-top: 2px solid var(--line); padding-top: 8px; min-width: 0; }
+.dirs dt { font-family: var(--font-mono); font-weight: 600; font-size: 13.5px; }
+.dirs dd { margin: 2px 0 0; color: var(--muted); font-size: 14.5px; line-height: 1.65; }
+
+figure { margin: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: grid; gap: 12px; min-width: 0; }
+figcaption { font-size: 13px; line-height: 1.65; color: var(--muted); max-width: 52em; }
+.fig-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; }
+.scroll { overflow-x: auto; min-width: 0; }
+.scroll svg { display: block; width: 100%; height: auto; }
+.topo svg { min-width: 700px; }
+.bars svg { min-width: 600px; }
+.dots svg { min-width: 600px; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 7px; }
+.sw { width: 12px; height: 12px; border-radius: 3px; flex: none; }
+.sw.gpu { background: var(--ink); }
+.sw.gpu-prod { border: 1.5px solid var(--ink); background: var(--surface); }
+.sw.local { background: var(--local); }
+.sw.root { background: var(--root); }
+.sw.socket { background: var(--socket); }
+.sw.ref { background: var(--ref); height: 5px; }
+.sw.ext { background: color-mix(in srgb, var(--socket) 35%, transparent); }
+
+.tabs { display: inline-flex; flex-wrap: wrap; gap: 3px; padding: 3px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); }
+.tabs button { font: 500 13px var(--font-body); color: var(--muted); background: transparent; border: 0; border-radius: 6px; padding: 5px 11px; cursor: pointer; }
+.tabs button:hover { color: var(--ink); }
+.tabs button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 0 0 1px var(--line); }
+
+/* SVG */
+.socket-box { fill: var(--tint); stroke: var(--line); }
+.root-box { fill: var(--surface); stroke: var(--line); }
+.sock-label { fill: var(--muted); font: 600 12px var(--font-mono); letter-spacing: 0.04em; }
+.link { stroke: var(--muted); stroke-width: 3; }
+.link-label { fill: var(--muted); font: 500 10px var(--font-mono); }
+.gpu { fill: var(--ink); }
+.gpu-prod { fill: var(--surface); stroke: var(--ink); stroke-width: 1.5; }
+.nic { stroke-width: 1.5; }
+.nic.local { fill: color-mix(in srgb, var(--local) 14%, var(--surface)); stroke: var(--local); }
+.nic.root { fill: color-mix(in srgb, var(--root) 14%, var(--surface)); stroke: var(--root); }
+.nic.socket { fill: color-mix(in srgb, var(--socket) 12%, var(--surface)); stroke: var(--socket); }
+.c1 { fill: var(--ink); font: 600 12px var(--font-mono); }
+.c2 { fill: var(--muted); font: 400 11px var(--font-mono); }
+.on-ink { fill: var(--surface); }
+.on-ink-2 { fill: color-mix(in srgb, var(--surface) 72%, var(--ink)); font: 400 11px var(--font-mono); }
+.v { font: 600 19px var(--font-mono); }
+.v.local, .lab.local { fill: var(--local); }
+.v.root, .lab.root { fill: var(--root); }
+.v.socket, .lab.socket { fill: var(--socket); }
+.tier { fill: var(--muted); font: 500 12px var(--font-body); }
+
+.grid { stroke: var(--line); stroke-width: 1; }
+.axis { stroke: var(--muted); stroke-width: 1; }
+.tick { fill: var(--muted); font: 400 11px var(--font-mono); }
+.rname { fill: var(--ink); font: 600 13px var(--font-mono); }
+.rsub { fill: var(--muted); font: 400 11.5px var(--font-body); }
+.bar-ref { fill: var(--ref); }
+.bar.local { fill: var(--local); }
+.bar.root { fill: var(--root); }
+.bar.socket { fill: var(--socket); }
+.bar.ext { opacity: 0.35; }
+.val { fill: var(--ink); font: 600 12.5px var(--font-mono); }
+
+.band.local { fill: color-mix(in srgb, var(--local) 30%, transparent); }
+.band.root { fill: color-mix(in srgb, var(--root) 30%, transparent); }
+.band.socket { fill: color-mix(in srgb, var(--socket) 30%, transparent); }
+.lab { font: 600 12px var(--font-body); }
+.obs { fill: var(--ink); }
+.exp { fill: var(--local); }
+.result { background: var(--tint); border-radius: 8px; padding: 12px 14px; max-width: 44em; }
+.dlab { fill: var(--ink); font: 500 12px var(--font-body); }
+
+/* Tables */
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+.data { min-width: 640px; }
+.small-table { min-width: 420px; max-width: 620px; }
+th, td { text-align: left; padding: 8px 12px 8px 0; border-bottom: 1px solid var(--line); vertical-align: middle; white-space: nowrap; }
+th { font-weight: 600; font-size: 12.5px; color: var(--muted); }
+td.n, th.n { text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+td.n { font-size: 13.5px; }
+td.strong { font-weight: 600; }
+tbody tr:last-child td { border-bottom: 0; }
+.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 8px; vertical-align: 1px; }
+.dot.local { background: var(--local); }
+.dot.root { background: var(--root); }
+.dot.socket { background: var(--socket); }
+
+.pairs { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 680px) { .pairs { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.pairs li { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; display: grid; gap: 2px; min-width: 0; }
+.pairs .g { font: 600 14px var(--font-mono); }
+.pairs .n { font: 400 13px var(--font-mono); color: var(--local); }
+
+/* Hypothesis flows */
+.flows { display: grid; gap: 12px; }
+.flow { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px 16px; display: grid; gap: 12px; }
+.flow-head { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 14px; }
+.flow-head .chip { justify-self: auto; }
+.chip.ok { color: var(--local); background: color-mix(in srgb, var(--local) 14%, transparent); }
+.chip.bad { color: var(--socket); background: color-mix(in srgb, var(--socket) 13%, transparent); }
+.flow-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(92px, 0.85fr) minmax(0, 1fr) minmax(92px, 0.85fr) minmax(0, 1fr); align-items: center; gap: 8px; }
+.node { border: 1.5px solid var(--line); border-radius: 8px; padding: 9px 10px; font-weight: 600; font-size: 13.5px; line-height: 1.4; text-align: center; background: var(--bg); min-width: 0; }
+.node small { display: block; margin-top: 2px; font: 400 11.5px var(--font-mono); color: var(--muted); }
+.node.local { border-color: var(--local); }
+.node.socket { border-color: var(--socket); }
+.node.gpu { background: var(--ink); border-color: var(--ink); color: var(--surface); }
+.node.gpu small { color: color-mix(in srgb, var(--surface) 72%, var(--ink)); }
+.edge { display: grid; justify-items: center; gap: 5px; font-size: 12.5px; line-height: 1.35; text-align: center; min-width: 0; }
+.edge.plain { color: var(--muted); }
+.edge.local { color: var(--local); font-weight: 600; }
+.edge.socket { color: var(--socket); font-weight: 600; }
+.arrow { position: relative; width: 100%; height: 2px; background: currentColor; }
+.arrow::after { content: ""; position: absolute; right: -1px; top: -4px; border-left: 9px solid currentColor; border-top: 5px solid transparent; border-bottom: 5px solid transparent; }
+@media (max-width: 640px) {
+  .flow-row { grid-template-columns: minmax(0, 1fr); }
+  .edge { grid-template-columns: auto auto; justify-content: center; align-items: center; gap: 10px; }
+  .arrow { width: 2px; height: 22px; order: -1; }
+  .arrow::after { right: auto; top: auto; left: -4px; bottom: -1px; border-top: 9px solid currentColor; border-left: 5px solid transparent; border-right: 5px solid transparent; border-bottom: 0; }
+}
+
+.steps { list-style: none; padding: 0; margin: 0; counter-reset: s; display: grid; gap: 20px; }
+.steps > li { counter-increment: s; display: grid; grid-template-columns: 30px minmax(0, 1fr); column-gap: 12px; row-gap: 6px; }
+.steps > li::before { content: counter(s); grid-column: 1; grid-row: 1 / span 2; width: 26px; height: 26px; border-radius: 50%; border: 1.5px solid var(--ink); display: grid; place-items: center; font: 600 13px var(--font-mono); }
+.steps > li > * { grid-column: 2; }
+.steps ul, .notes { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; max-width: 44em; }
+.steps ul li, .notes li { color: var(--ink); }
+.steps ul li::marker, .notes li::marker { color: var(--muted); }
+.notes { gap: 12px; }
+
+.terms { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 28px; margin: 0; }
+@media (max-width: 600px) { .terms { grid-template-columns: 1fr; } }
+.terms dt { font-weight: 600; font-size: 14.5px; }
+.terms dd { margin: 2px 0 0; color: var(--muted); font-size: 14px; line-height: 1.65; }
+.terms div { min-width: 0; }
+
+footer { border-top: 1px solid var(--line); padding-top: 18px; font-size: 13px; color: var(--muted); line-height: 1.7; }
+footer p { max-width: 52em; }
+</style>
+
+<main class="page">
+  <header class="masthead">
+    <p class="eyebrow">node03 · Mooncake TE · 单 NIC loopback · 1 GiB × 20 次 · GB/s</p>
+    <h1>RDMA 写进 GPU 有多快</h1>
+    <p class="lede">NIC 往 GPU 写数据的速度，取决于 NIC 和 GPU 在 PCIe 上隔多远。换成 dmabuf 注册也不会变快。线上 prefill 每张卡只跑到约 13 GB/s。去掉本机 store segment、只读远端的 store 后，每卡回到约 49，问题出在本机 store 的读取走了离 GPU 远的 NIC。</p>
+  </header>
+
+  <div class="findings">
+    <article class="finding">
+      <span class="chip done">已测</span>
+      <h3>PCIe 位置决定速度</h3>
+      <p>NIC 和 GPU 在同一个或相邻 root 下约 49，跨 root 约 18，跨 socket 约 13。写主存在任何位置都是约 48。</p>
+    </article>
+    <article class="finding">
+      <span class="chip done">已测</span>
+      <h3>dmabuf 没有收益</h3>
+      <p>写 GPU 时两种注册方式的带宽一样，GPU→host 方向 dmabuf 还更慢。ViT encoder 的 graph 不用关。</p>
+    </article>
+    <article class="finding">
+      <span class="chip done">已验证</span>
+      <h3>线上慢在本机读</h3>
+      <p>每卡 rx 约 13，最后一个 stage 约 20，正好落在跨 socket 和跨 root 两档。去掉本机 store segment、只读远端 node03 的 store 后，每卡回到约 49。</p>
+    </article>
+  </div>
+
+  <section id="setup">
+    <h2>这个测试量的是什么</h2>
+    <p>一张 NIC 自己发给自己（loopback），数据不出网口。所以测出来的是 NIC 到主存、NIC 到显存这两段 PCIe 路径的速度，跟网络无关。测试 pod 拿到的 GPU 是 <code>0000:15:00.0</code>，和 ionic_3（<code>19:00.0</code>）挂在同一个 root complex 下。下文说的「远」「近」都是相对这块 GPU。</p>
+    <dl class="dirs">
+      <div><dt>host→host</dt><dd>主存写主存。这是基准，看 NIC 本身能跑多快。</dd></div>
+      <div><dt>host→GPU 写</dt><dd>RDMA write。NIC 把数据直接 DMA 进显存（GPUDirect RDMA）。</dd></div>
+      <div><dt>GPU→host 写</dt><dd>NIC 从显存读出数据，再写进主存。</dd></div>
+      <div><dt>host→GPU 读</dt><dd>RDMA read。数据同样落进显存。</dd></div>
+    </dl>
+  </section>
+
+  <section id="distance">
+    <h2>位置决定写 GPU 的速度</h2>
+    <p>NIC 写主存是 PCIe 设备最常走的路径，CPU 对它做了充分优化，所以每张 NIC 都能跑到约 48。NIC 写显存是两个 PCIe 设备之间的点对点传输（P2P）。同一个 root 下几乎直达；跨 root 要经过 CPU 的 IO die 转发；跨 socket 还要再过一次 socket 间互联。转发得越远，速度越慢。</p>
+
+    <figure class="topo">
+      <div class="scroll">
+        <svg viewBox="0 0 860 262" role="img" aria-label="node03 PCIe 拓扑示意：GPU 15:00 与 ionic_3 同 root，写入 49.0；ionic_1 相邻 root 48.7；ionic_2 与 ionic_0 同 socket 远 root 约 18；ionic_4 到 7 跨 socket 13.2 到 13.7">
+          <rect class="socket-box" x="8" y="26" width="490" height="226" rx="12"/>
+          <text class="sock-label" x="24" y="48">SOCKET 0</text>
+          <rect class="socket-box" x="534" y="26" width="318" height="226" rx="12"/>
+          <text class="sock-label" x="550" y="48">SOCKET 1</text>
+          <line class="link" x1="498" y1="130" x2="534" y2="130"/>
+          <text class="link-label" x="516" y="120" text-anchor="middle">xGMI</text>
+
+          <!-- Socket 0 roots -->
+          <rect class="root-box" x="22" y="60" width="108" height="128" rx="8"/>
+          <rect class="gpu" x="32" y="70" width="88" height="48" rx="6"/>
+          <text class="c1 on-ink" x="76" y="90" text-anchor="middle">GPU</text>
+          <text class="on-ink-2" x="76" y="108" text-anchor="middle">15:00</text>
+          <rect class="nic local" x="32" y="128" width="88" height="48" rx="6"/>
+          <text class="c1" x="76" y="148" text-anchor="middle">ionic_3</text>
+          <text class="c2" x="76" y="166" text-anchor="middle">19:00</text>
+          <text class="v local" x="76" y="216" text-anchor="middle">49.0</text>
+          <text class="tier" x="76" y="236" text-anchor="middle">同 root</text>
+
+          <rect class="root-box" x="140" y="60" width="108" height="128" rx="8"/>
+          <rect class="nic local" x="150" y="128" width="88" height="48" rx="6"/>
+          <text class="c1" x="194" y="148" text-anchor="middle">ionic_1</text>
+          <text class="c2" x="194" y="166" text-anchor="middle">09:00</text>
+          <text class="v local" x="194" y="216" text-anchor="middle">48.7</text>
+          <text class="tier" x="194" y="236" text-anchor="middle">相邻 root</text>
+
+          <rect class="root-box" x="258" y="60" width="108" height="128" rx="8"/>
+          <rect class="gpu-prod" x="268" y="70" width="88" height="48" rx="6"/>
+          <text class="c1" x="312" y="90" text-anchor="middle">GPU</text>
+          <text class="c2" x="312" y="108" text-anchor="middle">65:00</text>
+          <rect class="nic root" x="268" y="128" width="88" height="48" rx="6"/>
+          <text class="c1" x="312" y="148" text-anchor="middle">ionic_2</text>
+          <text class="c2" x="312" y="166" text-anchor="middle">69:00</text>
+          <text class="v root" x="312" y="216" text-anchor="middle">17.9</text>
+          <text class="tier" x="312" y="236" text-anchor="middle">远 root</text>
+
+          <rect class="root-box" x="376" y="60" width="108" height="128" rx="8"/>
+          <rect class="nic root" x="386" y="128" width="88" height="48" rx="6"/>
+          <text class="c1" x="430" y="148" text-anchor="middle">ionic_0</text>
+          <text class="c2" x="430" y="166" text-anchor="middle">79:00</text>
+          <text class="v root" x="430" y="216" text-anchor="middle">18.3</text>
+          <text class="tier" x="430" y="236" text-anchor="middle">远 root</text>
+
+          <!-- Socket 1 roots -->
+          <rect class="root-box" x="548" y="60" width="67" height="128" rx="8"/>
+          <rect class="gpu-prod" x="554" y="70" width="55" height="48" rx="6"/>
+          <text class="c1" x="581.5" y="90" text-anchor="middle">GPU</text>
+          <text class="c2" x="581.5" y="108" text-anchor="middle">f5:00</text>
+          <rect class="nic socket" x="554" y="128" width="55" height="48" rx="6"/>
+          <text class="c1" x="581.5" y="148" text-anchor="middle">ionic_4</text>
+          <text class="c2" x="581.5" y="166" text-anchor="middle">f9:00</text>
+
+          <rect class="root-box" x="623" y="60" width="67" height="128" rx="8"/>
+          <rect class="nic socket" x="629" y="128" width="55" height="48" rx="6"/>
+          <text class="c1" x="656.5" y="148" text-anchor="middle">ionic_5</text>
+          <text class="c2" x="656.5" y="166" text-anchor="middle">89:00</text>
+
+          <rect class="root-box" x="698" y="60" width="67" height="128" rx="8"/>
+          <rect class="gpu-prod" x="704" y="70" width="55" height="48" rx="6"/>
+          <text class="c1" x="731.5" y="90" text-anchor="middle">GPU</text>
+          <text class="c2" x="731.5" y="108" text-anchor="middle">e5:00</text>
+          <rect class="nic socket" x="704" y="128" width="55" height="48" rx="6"/>
+          <text class="c1" x="731.5" y="148" text-anchor="middle">ionic_6</text>
+          <text class="c2" x="731.5" y="166" text-anchor="middle">e9:00</text>
+
+          <rect class="root-box" x="773" y="60" width="67" height="128" rx="8"/>
+          <rect class="nic socket" x="779" y="128" width="55" height="48" rx="6"/>
+          <text class="c1" x="806.5" y="148" text-anchor="middle">ionic_7</text>
+          <text class="c2" x="806.5" y="166" text-anchor="middle">99:00</text>
+
+          <text class="v socket" x="694" y="216" text-anchor="middle">13.2–13.7</text>
+          <text class="tier" x="694" y="236" text-anchor="middle">跨 socket</text>
+        </svg>
+      </div>
+      <div class="legend">
+        <span><i class="sw gpu"></i>测试用 GPU 15:00</span>
+        <span><i class="sw gpu-prod"></i>线上 prefill 的其他 GPU</span>
+        <span><i class="sw local"></i>同 / 相邻 root</span>
+        <span><i class="sw root"></i>同 socket 远 root</span>
+        <span><i class="sw socket"></i>跨 socket</span>
+      </div>
+      <figcaption>NIC 下方的数字是这张 NIC 写进 GPU 15:00 的带宽（host→GPU 写，GB/s）。示意图只画出已知的设备，root 的排列顺序不代表物理位置。</figcaption>
+    </figure>
+
+    <figure class="bars">
+      <div class="fig-head">
+        <h3>按 NIC 位置看带宽</h3>
+        <div class="tabs" role="group" aria-label="选择传输方向">
+          <button type="button" id="tab-hw" data-k="hw" aria-pressed="true">host→GPU 写</button>
+          <button type="button" id="tab-gh" data-k="gh" aria-pressed="false">GPU→host 写</button>
+          <button type="button" id="tab-hr" data-k="hr" aria-pressed="false">host→GPU 读</button>
+        </div>
+      </div>
+      <div class="scroll" id="bars"></div>
+      <div class="legend">
+        <span><i class="sw local"></i><i class="sw root"></i><i class="sw socket"></i>选中的方向</span>
+        <span><i class="sw ref"></i>host→host（写主存，基准）</span>
+        <span><i class="sw ext"></i>ionic_4–7 四张卡之间的波动范围</span>
+      </div>
+    </figure>
+
+    <div class="scroll">
+      <table class="data">
+        <thead>
+          <tr><th>NIC</th><th>PCIe</th><th>相对 GPU 15:00</th><th class="n">host→host</th><th class="n">host→GPU 写</th><th class="n">GPU→host 写</th><th class="n">host→GPU 读</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="mono">ionic_3</td><td class="mono">19:00</td><td><span class="dot local"></span>同 root（本地）</td><td class="n">48.5</td><td class="n strong">49.0</td><td class="n">46.1</td><td class="n">44.4</td></tr>
+          <tr><td class="mono">ionic_1</td><td class="mono">09:00</td><td><span class="dot local"></span>同 socket 相邻 root</td><td class="n">48.2</td><td class="n strong">48.7</td><td class="n">46.0</td><td class="n">44.2</td></tr>
+          <tr><td class="mono">ionic_0</td><td class="mono">79:00</td><td><span class="dot root"></span>同 socket 远 root</td><td class="n">48.5</td><td class="n strong">18.3</td><td class="n">28.4</td><td class="n">18.0</td></tr>
+          <tr><td class="mono">ionic_2</td><td class="mono">69:00</td><td><span class="dot root"></span>同 socket 远 root</td><td class="n">48.5</td><td class="n strong">17.9</td><td class="n">28.4</td><td class="n">17.6</td></tr>
+          <tr><td class="mono">ionic_4–7</td><td class="mono">f9 / 89 / e9 / 99</td><td><span class="dot socket"></span>跨 socket</td><td class="n">48.2–48.6</td><td class="n strong">13.2–13.7</td><td class="n">15.5–29.0</td><td class="n">13.0–13.5</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>反方向（GPU→host，NIC 从显存读）在远 root 时有 28，比写显存的 18 好一些，但离本地的 46 仍差一大截。</p>
+  </section>
+
+  <section id="dmabuf">
+    <h2>dmabuf 没有收益</h2>
+    <p>显存要先注册给 NIC 才能做 RDMA，有两种方式。<code>MOONCAKE_DISABLE_HIP_DMABUF=1</code> 用旧的 peer-memory 方式，<code>=0</code> 用 Linux 的 dma-buf。上面的数据都是 <code>=1</code>。换成 dma-buf 后，写 GPU 的带宽几乎一样，说明瓶颈在 PCIe 路径上，跟注册方式无关。</p>
+    <div class="scroll">
+      <table class="small-table">
+        <thead>
+          <tr><th>NIC</th><th>位置</th><th class="n">peer-mem（=1）</th><th class="n">dma-buf（=0）</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="mono">ionic_3</td><td><span class="dot local"></span>同 root</td><td class="n">49.0</td><td class="n">49.1</td></tr>
+          <tr><td class="mono">ionic_1</td><td><span class="dot local"></span>相邻 root</td><td class="n">48.7</td><td class="n">48.7</td></tr>
+          <tr><td class="mono">ionic_0</td><td><span class="dot root"></span>远 root</td><td class="n">18.3</td><td class="n">19.6</td></tr>
+          <tr><td class="mono">ionic_2</td><td><span class="dot root"></span>远 root</td><td class="n">17.9</td><td class="n">17.9</td></tr>
+          <tr><td class="mono">ionic_4–7</td><td><span class="dot socket"></span>跨 socket</td><td class="n">13.2–13.7</td><td class="n">13.2–13.7</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>表中是 host→GPU 写，单位 GB/s。GPU→host 方向在几个组合上，dma-buf 只有 16，peer-mem 有 28。dma-buf 换不来带宽，所以没必要为了开它去关 ViT encoder 的 graph。</p>
+  </section>
+
+  <section id="prod">
+    <h2>对照线上 prefill</h2>
+    <p>prefill 的 4 个 rank 在 NIXL 这边都是本地配对。启动日志里的 <code>vllm_net_devices</code> 显示每块 GPU 都配了同 root 的 NIC（PCI distance 8），Mooncake 用的也是这 4 条 rail。照理说，远端 store 读来的数据经本地 NIC 写进 GPU，应该能跑到约 49。</p>
+    <ul class="pairs">
+      <li><span class="g">GPU 65:00</span><span class="n">→ ionic_2 · 69:00</span></li>
+      <li><span class="g">GPU 15:00</span><span class="n">→ ionic_3 · 19:00</span></li>
+      <li><span class="g">GPU f5:00</span><span class="n">→ ionic_4 · f9:00</span></li>
+      <li><span class="g">GPU e5:00</span><span class="n">→ ionic_6 · e9:00</span></li>
+    </ul>
+    <figure class="dots">
+      <h3>实际每卡 rx 落在远距离那两档</h3>
+      <div class="scroll">
+        <svg viewBox="0 0 770 132" role="img" aria-label="数轴 0 到 50 GB/s：跨 socket 带 13.2 到 13.7，跨 root 带 17.9 到 19.6，同 root 带 48.7 到 49.1。线上每卡 rx 约 13，最后一个 stage 约 20，去掉本机 store segment 后约 49">
+          <rect class="band socket" x="219.5" y="26" width="6.8" height="78"/>
+          <rect class="band root" x="283.4" y="26" width="23.1" height="78"/>
+          <rect class="band local" x="702.3" y="26" width="5.5" height="78"/>
+          <text class="lab socket" x="226" y="18" text-anchor="end">跨 socket ≈13</text>
+          <text class="lab root" x="283" y="18">跨 root ≈18</text>
+          <text class="lab local" x="708" y="18" text-anchor="end">同 root ≈49</text>
+
+          <line class="axis" x1="40" y1="104" x2="720" y2="104"/>
+          <line class="axis" x1="40" y1="104" x2="40" y2="109"/>
+          <line class="axis" x1="176" y1="104" x2="176" y2="109"/>
+          <line class="axis" x1="312" y1="104" x2="312" y2="109"/>
+          <line class="axis" x1="448" y1="104" x2="448" y2="109"/>
+          <line class="axis" x1="584" y1="104" x2="584" y2="109"/>
+          <line class="axis" x1="720" y1="104" x2="720" y2="109"/>
+          <text class="tick" x="40" y="124" text-anchor="middle">0</text>
+          <text class="tick" x="176" y="124" text-anchor="middle">10</text>
+          <text class="tick" x="312" y="124" text-anchor="middle">20</text>
+          <text class="tick" x="448" y="124" text-anchor="middle">30</text>
+          <text class="tick" x="584" y="124" text-anchor="middle">40</text>
+          <text class="tick" x="720" y="124" text-anchor="middle">50</text>
+          <text class="tick" x="736" y="124">GB/s</text>
+
+          <circle class="obs" cx="216.8" cy="60" r="6"/>
+          <circle class="obs" cx="312" cy="60" r="6"/>
+          <circle class="exp" cx="706.4" cy="60" r="6"/>
+          <text class="dlab" x="206" y="88" text-anchor="end">每卡 rx ≈13</text>
+          <text class="dlab" x="322" y="88">最后一个 stage ≈20</text>
+          <text class="dlab" x="694" y="88" text-anchor="end">去掉本机 segment 后 ≈49</text>
+        </svg>
+      </div>
+      <figcaption>色带是测试里同类位置的 host→GPU 写带宽范围（两种注册方式都算在内）。黑点是线上观测值，绿点是去掉本机 store segment、只读远端 store 后的实测值。</figcaption>
+    </figure>
+  </section>
+
+  <section id="hypothesis">
+    <h2>本机读走错了 NIC <span class="chip done">已验证</span></h2>
+    <p>store 的数据一部分在远端节点，一部分在 prefill 本机的主存里（本机 store segment）。远端那部分从网络进来，经 GPU 本地的 NIC 写进显存，路径正确。本机那部分不经过网口，在 NIC 内部 loopback。从速度看，Mooncake 是按 store segment 所在的 NUMA 挑的 NIC，没考虑目的 GPU 在哪，写显存这一段就成了跨 root 或跨 socket 的 P2P。一次 <code>get</code> 要等所有分片都返回，本机这部分一慢，整个 <code>get</code> 都被拖住。</p>
+    <p class="result"><strong>验证结果</strong>　prefill 所在节点不放 store segment、只用远端 node03 的 store 后，每卡吞吐从约 13 回到约 49。慢的就是本机这部分读取。具体落在哪张 NIC 还没直接看到，但 13 和 18 这两档速度说明它走的是离 GPU 远的 NIC。</p>
+    <div class="flows">
+      <div class="flow">
+        <div class="flow-head"><span class="chip bad">现状</span>按 store segment 所在的 NUMA 选 NIC</div>
+        <div class="flow-row">
+          <div class="node">本机主存<small>另一个 NUMA</small></div>
+          <div class="edge plain"><span>NIC 读主存<br>同 NUMA</span><i class="arrow"></i></div>
+          <div class="node socket">store 所在 NUMA 的 NIC<small>离 GPU 远</small></div>
+          <div class="edge socket"><span>远距离 P2P<br>≈13–18</span><i class="arrow"></i></div>
+          <div class="node gpu">GPU<small>15:00</small></div>
+        </div>
+      </div>
+      <div class="flow">
+        <div class="flow-head"><span class="chip ok">修法一</span>按目的 GPU 选 NIC</div>
+        <div class="flow-row">
+          <div class="node">本机主存<small>另一个 NUMA</small></div>
+          <div class="edge plain"><span>NIC 读主存<br>跨 NUMA</span><i class="arrow"></i></div>
+          <div class="node local">GPU 本地 NIC<small>ionic_3 · 19:00</small></div>
+          <div class="edge local"><span>同 root P2P<br>≈49</span><i class="arrow"></i></div>
+          <div class="node gpu">GPU<small>15:00</small></div>
+        </div>
+      </div>
+      <div class="flow">
+        <div class="flow-head"><span class="chip ok">修法二</span>store segment 和 GPU 放在同一个 NUMA</div>
+        <div class="flow-row">
+          <div class="node">本机主存<small>GPU 同 NUMA</small></div>
+          <div class="edge plain"><span>NIC 读主存<br>同 NUMA</span><i class="arrow"></i></div>
+          <div class="node local">GPU 本地 NIC<small>ionic_3 · 19:00</small></div>
+          <div class="edge local"><span>同 root P2P<br>≈49</span><i class="arrow"></i></div>
+          <div class="node gpu">GPU<small>15:00</small></div>
+        </div>
+      </div>
+    </div>
+    <p>现状和修法一都跨了 NUMA，区别在跨的是哪一段。现状是在 P2P 写显存那一段跨，测试里跨 socket 只有约 13。修法一改成在 NIC 读主存那一段跨，这是设备访问内存的常规路径，CPU 对它优化得很好；写显存那一段回到同 root，约 49。修法二两段都不跨，路径最短，但要求每个 rank 要读的数据正好放在它自己 NUMA 的 segment 里。</p>
+    <p>修法一还有一点要确认。测试没有单独测过「NIC 读另一个 NUMA 的主存」这种组合。如果测试 pod 的 host buffer 分配在 socket 0，那 ionic_4–7 的 host→host 约 48 已经说明跨 socket 读写主存能跑满。可以查一下 buffer 当时在哪个 NUMA，或者用 <code>numactl --membind</code> 把 buffer 绑到另一个 NUMA，再经 ionic_3 写 GPU 15:00 补测一次。</p>
+  </section>
+
+  <section id="next">
+    <h2>下一步</h2>
+    <ol class="steps">
+      <li>
+        <h3>验证本机读是瓶颈（已完成）</h3>
+        <ul>
+          <li>prefill 所在节点不放 store segment，只用远端 node03 的 store：每卡吞吐从约 13 回到约 49。</li>
+          <li>还可以在 Mooncake TE 里打开 per-device 统计，直接看到本机读落在哪张 NIC 上，修完后用它做前后对比。</li>
+        </ul>
+      </li>
+      <li>
+        <h3>修本机读的路径</h3>
+        <ul>
+          <li>临时办法：prefill 节点先不放 store segment（已测约 49）。代价是 store 少了这台机器的容量，所有读取都要过网络。</li>
+          <li>修法一：同机读也走 GPU 本地 NIC，选 NIC 时以目的 GPU 为准（destination affinity）。前提是跨 NUMA 读主存能跑满，先补测。</li>
+          <li>修法二：让 store segment 按 GPU 本地 NIC 做 NUMA / rail 对齐。前提是能控制每个 rank 的数据落在哪个 segment。</li>
+        </ul>
+      </li>
+    </ol>
+  </section>
+
+  <section id="notes">
+    <h2>补充意见</h2>
+    <p>下面几点不在原始结论里，是读完数据后的补充。</p>
+    <ul class="notes">
+      <li>本机读可以完全不经过 NIC。store segment 和 GPU 在同一台机器上时，用 <code>hipMemcpy</code> 做 H2D 拷贝，由 GPU 自己的 DMA 引擎读主存。这走的是设备读主存的常规路径，不受 P2P 限制。可以查一下 Mooncake 对同机读有没有这样的本地路径。</li>
+      <li>dma-buf 在 GPU→host 方向更慢。如果 put（GPU 写回 store）也走 RDMA，保持 <code>MOONCAKE_DISABLE_HIP_DMABUF=1</code> 对 put 也更好。</li>
+    </ul>
+  </section>
+
+  <section id="terms">
+    <h2>术语</h2>
+    <dl class="terms">
+      <div><dt>Root complex</dt><dd>CPU 上的 PCIe 根端口。挂在同一个 root 下的设备之间路径最短。</dd></div>
+      <div><dt>P2P</dt><dd>两个 PCIe 设备直接互传，不经过主存。NIC 写显存就是 P2P。</dd></div>
+      <div><dt>GPUDirect RDMA</dt><dd>NIC 直接把数据 DMA 进显存，不在主存中转。</dd></div>
+      <div><dt>peer-mem / dma-buf</dt><dd>把显存注册给 NIC 的两种方式，由 <code>MOONCAKE_DISABLE_HIP_DMABUF</code> 切换。</dd></div>
+      <div><dt>Loopback</dt><dd>NIC 发给自己，数据不出网口。本机 store 的读取就是这种情况。</dd></div>
+      <div><dt>Rail</dt><dd>一组固定配对的 GPU 和 NIC，例如 GPU 15:00 和 ionic_3。</dd></div>
+      <div><dt>Store segment</dt><dd>某台机器贡献给 Mooncake store 的一块主存。</dd></div>
+      <div><dt>NUMA / socket</dt><dd>每个 CPU socket 有自己就近的内存和 PCIe 设备，跨 socket 访问要过 xGMI。</dd></div>
+    </dl>
+  </section>
+
+  <footer>
+    <p>数据来源：node03 上的 RDMA→GPU 带宽测试，Mooncake TE，单张 NIC loopback，1 GiB × 20 次。除 dmabuf 对照外，所有数据都在 <code>MOONCAKE_DISABLE_HIP_DMABUF=1</code> 下测得。拓扑图是示意，只用于说明相对距离。</p>
+  </footer>
+</main>
+
+<script>
+(function () {
+  var ROWS = [
+    { nic: "ionic_3", pci: "19:00", where: "同 root", tier: "local", hh: 48.5, hw: 49.0, gh: 46.1, hr: 44.4 },
+    { nic: "ionic_1", pci: "09:00", where: "相邻 root", tier: "local", hh: 48.2, hw: 48.7, gh: 46.0, hr: 44.2 },
+    { nic: "ionic_0", pci: "79:00", where: "远 root", tier: "root", hh: 48.5, hw: 18.3, gh: 28.4, hr: 18.0 },
+    { nic: "ionic_2", pci: "69:00", where: "远 root", tier: "root", hh: 48.5, hw: 17.9, gh: 28.4, hr: 17.6 },
+    { nic: "ionic_4–7", pci: "f9/89/e9/99", where: "跨 socket", tier: "socket", hh: [48.2, 48.6], hw: [13.2, 13.7], gh: [15.5, 29.0], hr: [13.0, 13.5] }
+  ];
+  var NAMES = { hw: "host→GPU 写", gh: "GPU→host 写", hr: "host→GPU 读" };
+  var W = 760, L = 172, R = 700, TOP = 6, ROW = 54, MAX = 50;
+
+  function span(v) { return Array.isArray(v) ? v : [v, v]; }
+  function fmt(v) { return Array.isArray(v) ? v[0].toFixed(1) + "–" + v[1].toFixed(1) : v.toFixed(1); }
+  function x(v) { return L + (v / MAX) * (R - L); }
+
+  function render(key) {
+    var plotH = ROWS.length * ROW;
+    var H = TOP + plotH + 28;
+    var s = '<svg viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="' + NAMES[key] + ' 与 host→host 的带宽对比，按 NIC 位置分行">';
+    for (var t = 0; t <= MAX; t += 10) {
+      s += '<line class="grid" x1="' + x(t) + '" x2="' + x(t) + '" y1="' + TOP + '" y2="' + (TOP + plotH) + '"/>';
+      s += '<text class="tick" x="' + x(t) + '" y="' + (TOP + plotH + 18) + '" text-anchor="middle">' + t + "</text>";
+    }
+    s += '<text class="tick" x="' + (R + 14) + '" y="' + (TOP + plotH + 18) + '">GB/s</text>';
+    ROWS.forEach(function (r, i) {
+      var y = TOP + i * ROW;
+      var h = span(r.hh), v = span(r[key]);
+      s += '<text class="rname" x="0" y="' + (y + 24) + '">' + r.nic + "</text>";
+      s += '<text class="rsub" x="0" y="' + (y + 42) + '">' + r.pci + " · " + r.where + "</text>";
+      s += '<rect class="bar-ref" x="' + L + '" y="' + (y + 10) + '" width="' + (x(h[1]) - L) + '" height="6" rx="2"/>';
+      s += '<rect class="bar ' + r.tier + '" x="' + L + '" y="' + (y + 22) + '" width="' + (x(v[0]) - L) + '" height="20" rx="3"/>';
+      if (v[1] - v[0] > 1) {
+        s += '<rect class="bar ext ' + r.tier + '" x="' + x(v[0]) + '" y="' + (y + 22) + '" width="' + (x(v[1]) - x(v[0])) + '" height="20" rx="3"/>';
+      }
+      s += '<text class="val" x="' + (x(v[1]) + 8) + '" y="' + (y + 37) + '">' + fmt(r[key]) + "</text>";
+    });
+    s += "</svg>";
+    document.getElementById("bars").innerHTML = s;
+  }
+
+  var buttons = document.querySelectorAll(".tabs button");
+  buttons.forEach(function (b) {
+    b.addEventListener("click", function () {
+      buttons.forEach(function (o) { o.setAttribute("aria-pressed", o === b ? "true" : "false"); });
+      render(b.getAttribute("data-k"));
+    });
+  });
+  render("hw");
+})();
+</script>
+
+</body></html>
